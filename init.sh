@@ -40,6 +40,7 @@ done
 BRANCH="prod"
 POOL_NAME="${BRANCH}-github-pool-${PROJECT_ID}"
 PROVIDER_NAME="github"
+SERVICE_ACCOUNT_NAME="github-actions-sa-${BRANCH}"
 REPO="gmccormick8/gcp-demo-platform"
 
 # Create Workload Identity Pool
@@ -69,12 +70,33 @@ gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_NAME}" \
   --issuer-uri="https://token.actions.githubusercontent.com" \
   --attribute-condition="attribute.ref=='refs/heads/${BRANCH}' && attribute.repository=='${REPO}'"
 
+# Create Service Account
+echo "Creating Service Account..."
+gcloud iam service-accounts create "${SERVICE_ACCOUNT_NAME}" \
+  --project="${PROJECT_ID}" \
+  --display-name="GitHub Actions Service Account - ${BRANCH}"
+
+# Grant necessary roles to the service account
+echo "Granting roles..."
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --role="roles/iam.workloadIdentityUser"
+
+# Allow authentication from GitHub Actions
+echo "Setting up Workload Identity Federation..."
+gcloud iam service-accounts add-iam-policy-binding "${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --project="${PROJECT_ID}" \
+  --role="roles/iam.workloadIdentityUser" \
+  --member="principalSet://iam.googleapis.com/${POOL_ID}/attribute.repository/${REPO}?attribute.ref=refs/heads/${BRANCH}"
+
 # Create Terraform state bucket
 BUCKET_NAME="${BRANCH}-tf-state-${PROJECT_ID}"
 echo "Creating Terraform state bucket..."
 gcloud storage buckets create gs://"${BUCKET_NAME}" \
   --project="${PROJECT_ID}" \
-  --public-access-prevention
+  --public-access-prevention \
+  --uniform-bucket-level-access \
+  --versioning 
 
 # Output important information
 echo ""
@@ -82,13 +104,16 @@ echo "================================================================"
 echo "                   SETUP COMPLETED SUCCESSFULLY                    "
 echo "================================================================"
 echo ""
-echo " IMPORTANT: Save these values for GitHub Actions configuration:"
+echo " IMPORTANT: Save these values for GitHub Actions and Terraform State configuration:"
 echo ""
 echo " Project ID:"
 echo "   ${PROJECT_ID}"
 echo ""
 echo " Workload Identity Provider:"
 echo "   ${POOL_ID}/providers/${PROVIDER_NAME}"
+echo ""
+echo " Service Account:"
+echo "   ${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 echo ""
 echo " Terraform State Bucket:"
 echo "   ${BUCKET_NAME}"

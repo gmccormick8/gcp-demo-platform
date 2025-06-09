@@ -117,7 +117,6 @@ gcloud storage buckets create gs://"${BUCKET_NAME}" \
   --project="${PROJECT_ID}" \
   --public-access-prevention \
   --uniform-bucket-level-access \
-  --versioning 
 
 # Output important information
 echo ""

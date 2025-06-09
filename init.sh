@@ -1,6 +1,10 @@
 #!/bin/bash
-# This script sets up the environment 
-#usage: bash setup.sh or ./setup.sh
+# This script sets up the GCP environment for GitHub Actions integration using Workload Identity Federation.
+# Requirements:
+#   - GCloud CLI installed and initialized
+#   - Valid GCP project with billing enabled
+#   - Project Owner or Editor permissions
+# Usage: bash init.sh or ./init.sh
 
 # Exit immediately if a command exits with a non-zero status. 
 set -e

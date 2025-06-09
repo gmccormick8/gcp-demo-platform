@@ -35,3 +35,6 @@ override.tf.json
 # Ignore CLI configuration files
 .terraformrc
 terraform.rc
+
+# Ignore generated credentials from google-github-actions/auth
+gha-creds-*.json

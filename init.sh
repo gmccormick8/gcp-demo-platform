@@ -22,6 +22,19 @@ fi
 
 echo "Using Project ID: '$PROJECT_ID'"
 
+# Check for branch parameter
+if [ -z "$1" ]; then
+  echo "Error: Branch parameter is required (dev, staging, or prod)"
+  echo "Usage: ./init.sh <branch>"
+  exit 1
+fi
+
+BRANCH="$1"
+if [[ ! "$BRANCH" =~ ^(dev|staging|prod)$ ]]; then
+  echo "Error: Branch must be 'dev', 'staging', or 'prod'"
+  exit 1
+fi
+
 # Main script logic
 api_array=(
   "compute.googleapis.com"
@@ -37,7 +50,6 @@ for api in "${api_array[@]}"; do
 done
 
 # Set variables
-BRANCH="prod"
 POOL_NAME="${BRANCH}-github-pool-${PROJECT_ID}"
 PROVIDER_NAME="github"
 SERVICE_ACCOUNT_NAME="github-actions-sa-${BRANCH}"

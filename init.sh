@@ -93,10 +93,15 @@ gcloud iam service-accounts create "${SERVICE_ACCOUNT_NAME}" \
 sleep 10
 
 # Grant necessary roles to the service account
-echo "Granting roles..."
+echo "Granting minimal required roles..."
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="serviceAccount:${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
   --role="roles/iam.workloadIdentityUser"
+
+# Grant storage admin for Terraform state management
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --role="roles/storage.admin"
 
 # Allow authentication from GitHub Actions
 echo "Setting up Workload Identity Federation..."

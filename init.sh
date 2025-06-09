@@ -50,7 +50,8 @@ for api in "${api_array[@]}"; do
 done
 
 # Set variables
-POOL_NAME="${BRANCH}-github-pool-${PROJECT_ID}"
+random_number=$((RANDOM % 99999 + 0))
+POOL_NAME="${BRANCH}-github-pool-${random_number}"
 PROVIDER_NAME="github"
 SERVICE_ACCOUNT_NAME="github-actions-sa-${BRANCH}"
 REPO="gmccormick8/gcp-demo-platform"

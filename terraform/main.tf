@@ -9,15 +9,27 @@ terraform {
 }
 
 provider "google" {
-  project = var.project_id
-  region  = var.region
+  project = "hazel-delight-462019-i6"
 }
 
-variable "project_id" {
-  type = string
+
+variable "environment" {
+    default = "prod"
 }
 
-variable "region" {
-  type    = string
-  default = "us-central1"
+locals {
+  service_account_id = "github-actions-sa-${var.environment}"
+}
+
+# Grant additional roles to the GitHub Actions service account
+resource "google_project_iam_member" "github_actions_roles" {
+  for_each = toset([
+    "roles/monitoring.admin",
+    "roles/logging.admin"
+  ])
+
+  project = "hazel-delight-462019-i6"
+
+  role    = each.key
+  member  = "serviceAccount:${local.service_account_id}@hazel-delight-462019-i6.iam.gserviceaccount.com"
 }

@@ -28,6 +28,7 @@ api_array=(
   "iam.googleapis.com"
   "iamcredentials.googleapis.com"
   "cloudresourcemanager.googleapis.com"
+  "storage.googleapis.com"
 )
 
 for api in "${api_array[@]}"; do
@@ -36,9 +37,8 @@ for api in "${api_array[@]}"; do
 done
 
 # Set variables
-random_number=$((RANDOM % 99999 + 0))
 BRANCH="prod"
-POOL_NAME="github-pool-${BRANCH}-$random_number"
+POOL_NAME="${BRANCH}-github-pool-${PROJECT_ID}"
 PROVIDER_NAME="github"
 REPO="gmccormick8/gcp-demo-platform"
 
@@ -69,6 +69,13 @@ gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_NAME}" \
   --issuer-uri="https://token.actions.githubusercontent.com" \
   --attribute-condition="attribute.ref=='refs/heads/${BRANCH}' && attribute.repository=='${REPO}'"
 
+# Create Terraform state bucket
+BUCKET_NAME="${BRANCH}-tf-state-${PROJECT_ID}"
+echo "Creating Terraform state bucket..."
+gcloud storage buckets create gs://"${BUCKET_NAME}" \
+  --project="${PROJECT_ID}" \
+  --public-access-prevention
+
 # Output important information
 echo ""
 echo "================================================================"
@@ -82,5 +89,8 @@ echo "   ${PROJECT_ID}"
 echo ""
 echo " Workload Identity Provider:"
 echo "   ${POOL_ID}/providers/${PROVIDER_NAME}"
+echo ""
+echo " Terraform State Bucket:"
+echo "   ${BUCKET_NAME}"
 echo ""
 echo "================================================================"

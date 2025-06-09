@@ -89,6 +89,9 @@ gcloud iam service-accounts create "${SERVICE_ACCOUNT_NAME}" \
   --project="${PROJECT_ID}" \
   --display-name="GitHub Actions Service Account - ${BRANCH}"
 
+# Wait for the service account to be created
+sleep 10
+
 # Grant necessary roles to the service account
 echo "Granting roles..."
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \

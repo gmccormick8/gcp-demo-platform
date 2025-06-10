@@ -1,23 +1,19 @@
-# This is a basic workflow to help you get started with Actions
-
-name: Terraform Deploy
+name: GCP Demo - Terraform Infrastructure Pipeline
 
 on:
   push:
-    branches: [ "dev", "staging", "prod" ]
+    branches: [ "prod", "staging", "dev" ]
   pull_request:
-    branches: [ "dev", "staging", "prod" ]
+    branches: [ "prod", "staging", "dev" ]
   workflow_dispatch:
 
 jobs:
-  
-  deploy:
+  plan:
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name }}
     
     permissions:
       contents: 'read'
-      pages: 'write'
       id-token: 'write'
 
     steps:
@@ -33,12 +29,11 @@ jobs:
       
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.11.0'
 
       - name: Terraform Format
-        run: terraform fmt -recursive
+        run: terraform fmt -check -recursive
 
       - name: Terraform Init
         env:
@@ -47,7 +42,75 @@ jobs:
           terraform init \
             -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
 
+      - name: Terraform Validate
+        env:
+          TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
+        run: terraform validate -no-color
+
       - name: Terraform Plan
         env:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
-        run: terraform plan
+          # Prevent prompts in CI/CD environment
+          TF_IN_AUTOMATION: "true"
+        run: |
+          # Create plan with detailed exit codes:
+          # 0 = No changes
+          # 1 = Error
+          # 2 = Changes present
+          terraform plan -detailed-exitcode -out=tfplan -no-color || \
+          if [ $? -eq 1 ]; then
+            echo "Terraform plan failed"
+            exit 1
+          fi
+
+      - name: Upload Terraform Plan
+        uses: actions/upload-artifact@v3
+        with:
+          name: tfplan
+          path: tfplan
+          retention-days: 1
+
+  apply:
+    needs: plan
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
+    if: |
+      github.event_name != 'pull_request' && (
+        (github.ref == 'refs/heads/dev') ||
+        (github.ref == 'refs/heads/staging' && github.event.pull_request.base.ref == 'dev') ||
+        (github.ref == 'refs/heads/main' && github.event.pull_request.base.ref == 'staging')
+      )
+    
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ secrets.PROJECT_ID }}
+          workload_identity_provider: '${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}'
+      
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        env:
+          TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+
+      - name: Download Terraform Plan
+        uses: actions/download-artifact@v3
+        with:
+          name: tfplan
+
+      - name: Terraform Apply
+        env:
+          TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
+        run: terraform apply -auto-approve tfplan

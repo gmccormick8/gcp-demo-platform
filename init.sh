@@ -88,7 +88,7 @@ gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_NAME}" \
 # Grant necessary roles to the service account
 echo "Granting minimal required roles..."
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="principalSet://iam.googleapis.com/${POOL_ID}/attribute.repository/${REPO}/attribute.ref/refs/heads/${BRANCH}" \
+  --member="principalSet://iam.googleapis.com/${POOL_ID}/*" \
   --role="roles/iam.workloadIdentityUser"
 
 # Create Terraform state bucket
@@ -97,21 +97,16 @@ echo "Creating Terraform state bucket..."
 gcloud storage buckets create gs://${BUCKET_NAME} \
   --project=${PROJECT_ID} \
   --public-access-prevention \
-  --uniform-bucket-level-access \
+  --uniform-bucket-level-access
 
 sleep 10
 
 gcloud storage buckets update gs://${BUCKET_NAME} --versioning
 
-gcloud storage buckets add-iam-policy-binding "gs://${BUCKET_NAME}" \
-    --role="roles/storage.admin" \
-    --member="principalSet://iam.googleapis.com/${POOL_ID}/attribute.repository/${REPO}/attribute.ref/refs/heads/${BRANCH}"
-
-# Grant necessary roles to the service account
-echo "Granting minimal required roles..."
+# Grant project-wide roles with group condition
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="principalSet://iam.googleapis.com/${POOL_ID}/attribute.repository/${REPO}/attribute.ref/refs/heads/${BRANCH}" \
-  --role="roles/editor"
+  --member="principalSet://iam.googleapis.com/${POOL_ID}/*" \
+  --role="roles/editor" 
 
 # Output important information
 echo ""

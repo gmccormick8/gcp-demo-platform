@@ -38,4 +38,3 @@ terraform.rc
 
 # Ignore generated credentials from google-github-actions/auth
 gha-creds-*.json
-.github/BRANCH_PROTECTION.md

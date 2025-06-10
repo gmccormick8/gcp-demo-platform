@@ -101,7 +101,7 @@ gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
 # Grant storage admin for Terraform state management
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="serviceAccount:${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
-  --role="roles/storage.admin"
+  --role="roles/storage.objectAdmin"
 
 # Allow authentication from GitHub Actions
 echo "Setting up Workload Identity Federation..."

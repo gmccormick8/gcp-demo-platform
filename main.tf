@@ -5,10 +5,7 @@ terraform {
       version = "~> 4.0"
     }
   }
-  backend "gcs" {
-    bucket  = "prod-tf-state-hazel-delight-462019-i6"
-    prefix  = "terraform/state"
-  }
+  backend "gcs" { }
 }
 
 provider "google" {

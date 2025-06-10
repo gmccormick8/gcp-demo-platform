@@ -16,7 +16,6 @@ jobs:
     
     env:
       TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
-      TF_VAR_tf_state_bucket: ${{ secrets.TF_STATE_BUCKET }}
 
     defaults:
       run:
@@ -57,19 +56,7 @@ jobs:
         run: terraform fmt --recursive -check
         continue-on-error: true
 
-      - name: Terraform Init
-        id: init
-        run: terraform init -input=false
-
-      - name: Terraform Validate
-        id: validate
-        run: terraform validate -no-color
-
-      - name: Terraform Plan
-        id: plan
-        run: terraform plan -no-color -input=false
-        continue-on-error: true
-
-      - name: Terraform Apply
-        if: github.ref == 'refs/heads/prod' && github.event_name == 'push'
-        run: terraform apply -auto-approve -input=false
+      - name: Debug Terraform Backend
+        run: terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+                            -backend-config="prefix=terraform/state" \
+                            -backend-config="credentials=${{ secrets.SERVICE_ACCOUNT }}"

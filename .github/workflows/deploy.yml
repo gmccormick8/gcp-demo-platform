@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: CI
+name: Terraform Deploy
 
 on:
   push:
@@ -40,20 +40,19 @@ jobs:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.SERVICE_ACCOUNT }}
 
+      - name: Set up Cloud SDK
+        uses: 'google-github-actions/setup-gcloud@v2'
+
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.12.1
 
-      - name: Debug Terraform Backend
-        run: terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
-                            -backend-config="prefix=terraform/state" \
-                            -backend-config="credentials=${{ secrets.SERVICE_ACCOUNT }}"
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Initialize Terraform
+        run: terraform init
 
       - name: Terraform Plan
-        run: terraform plan -out=tfplan
-
-      - name: Terraform fmt
-        id: fmt
-        run: terraform fmt --recursive -check
-        continue-on-error: true
+        run: terraform plan

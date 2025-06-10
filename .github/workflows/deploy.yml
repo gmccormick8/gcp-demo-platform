@@ -30,16 +30,23 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Authenticate to Google Cloud
-        uses: 'google-github-actions/auth@v2.1.10'
-        with:
-          project_id: ${{ vars.PROJECT_ID }}
-          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.SERVICE_ACCOUNT }}
 
       - name: Set up Cloud SDK
         uses: 'google-github-actions/setup-gcloud@v2'
+
+      - id: 'auth'
+        name: 'Authenticate to GCP'
+        uses: 'google-github-actions/auth@v2.1.10'
+        with:
+            create_credentials_file: 'true'
+            workload_identity_provider: '${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}'
+            service_account: '${{ secrets.SERVICE_ACCOUNT }}'
+      - id: 'gcloud'
+        name: 'gcloud'
+        run: |-
+          gcloud auth login --brief --cred-file="${{ steps.auth.outputs.credentials_file_path }}"
+          gcloud services list
+          gcloud config set project ${{ vars.PROJECT_ID }}
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3

@@ -118,6 +118,10 @@ gcloud storage buckets create gs://"${BUCKET_NAME}" \
   --public-access-prevention \
   --uniform-bucket-level-access \
 
+sleep 10
+
+gcloud storage buckets update gs://"${BUCKET_NAME}" --versioning
+
 # Output important information
 echo ""
 echo "================================================================"

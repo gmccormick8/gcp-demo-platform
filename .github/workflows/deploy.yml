@@ -3,7 +3,7 @@ name: GCP Demo - Terraform Infrastructure Pipeline
 on:
   push:
     branches: [ "prod", "staging", "dev" ]
-  pull_request:
+  pull_request_target:
     branches: [ "prod", "staging", "dev" ]
   workflow_dispatch:
 
@@ -19,6 +19,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          # This is important for pull_request_target to checkout PR code
 
       - name: Authenticate to GCP
         id: auth
@@ -75,11 +78,15 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name }}
     if: |
-      github.event_name != 'pull_request' && (
+      (github.event_name != 'pull_request_target' && (
         (github.ref == 'refs/heads/dev') ||
-        (github.ref == 'refs/heads/staging' && github.event.pull_request.base.ref == 'dev') ||
-        (github.ref == 'refs/heads/main' && github.event.pull_request.base.ref == 'staging')
-      )
+        (github.ref == 'refs/heads/staging') ||
+        (github.ref == 'refs/heads/main')
+      )) ||
+      (github.event_name == 'pull_request_target' && (
+        (github.event.pull_request.base.ref == 'dev') ||
+        (github.event.pull_request.base.ref == 'staging')
+      ))
     
     permissions:
       contents: 'read'

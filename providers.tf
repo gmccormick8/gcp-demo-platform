@@ -8,11 +8,12 @@ terraform {
     }
   }
   backend "gcs" {
-    bucket  = ""
-    prefix  = "terraform/state"
+    bucket = ""
+    prefix = "terraform/state"
   }
 }
 
 provider "google" {
-  project = var.project_id
+  project                     = var.project_id
+  impersonate_service_account = var.service_account_email
 }

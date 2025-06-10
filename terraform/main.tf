@@ -5,11 +5,15 @@ terraform {
       version = "~> 4.0"
     }
   }
-  backend "gcs" {}
+  backend "gcs" {
+    bucket  = var.tf_state_bucket
+    prefix  = "terraform/state"
+    project = var.project_id
+  }
 }
 
 provider "google" {
-  project = "hazel-delight-462019-i6"
+  project = var.project_id
 }
 
 

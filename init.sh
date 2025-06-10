@@ -82,25 +82,14 @@ gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_NAME}" \
   --issuer-uri="https://token.actions.githubusercontent.com" \
   --attribute-condition="assertion.ref=='refs/heads/${BRANCH}' && assertion.repository=='${REPO}'"
 
-# Create Service Account
-echo "Creating Service Account..."
-gcloud iam service-accounts create "${SERVICE_ACCOUNT_NAME}" \
-  --project="${PROJECT_ID}" \
-  --display-name="GitHub Actions Service Account - ${BRANCH}"
-
-# Wait for the service account to be created
-sleep 10
-
 # Grant necessary roles to the service account
 echo "Granting minimal required roles..."
-gcloud projects add-iam-policy-binding "Assign Base Access" \
-  --project="${PROJECT_ID}" \
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="principalSet://iam.googleapis.com/${POOL_ID}/attribute.repository/${REPO}?attribute.ref=refs/heads/${BRANCH}" \
   --role="roles/iam.workloadIdentityUser"
 
 # Grant Editor role
-gcloud projects add-iam-policy-binding "Assign Editor Role" \
-  --project="${PROJECT_ID}" \
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="principalSet://iam.googleapis.com/${POOL_ID}/attribute.repository/${REPO}?attribute.ref=refs/heads/${BRANCH}" \
   --role="roles/editor"
 

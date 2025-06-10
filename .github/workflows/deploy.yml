@@ -45,8 +45,10 @@ jobs:
         with:
           terraform_version: 1.12.1
 
-      - name: Terraform Init
-        run: terraform init
+      - name: Debug Terraform Backend
+        run: terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+                            -backend-config="prefix=terraform/state" \
+                            -backend-config="credentials=${{ secrets.SERVICE_ACCOUNT }}"
 
       - name: Terraform Plan
         run: terraform plan -out=tfplan
@@ -55,8 +57,3 @@ jobs:
         id: fmt
         run: terraform fmt --recursive -check
         continue-on-error: true
-
-      - name: Debug Terraform Backend
-        run: terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
-                            -backend-config="prefix=terraform/state" \
-                            -backend-config="credentials=${{ secrets.SERVICE_ACCOUNT }}"

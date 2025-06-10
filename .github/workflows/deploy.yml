@@ -16,7 +16,6 @@ jobs:
     
     env:
       TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
-      TF_VAR_state_bucket: ${{ secrets.TF_STATE_BUCKET }}
 
     defaults:
       run:
@@ -55,8 +54,7 @@ jobs:
       - name: Initialize Terraform
         run: |
           terraform init \
-            -backend-config="bucket=gs://${TF_VAR_state_bucket}" \
-            -backend-config="prefix=terraform/state"
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
 
       - name: Terraform Plan
         run: terraform plan

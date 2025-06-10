@@ -7,7 +7,10 @@ terraform {
       version = "~> 6.39"
     }
   }
-  backend "gcs" {}
+  backend "gcs" {
+    bucket  = ""
+    prefix  = "terraform/state"
+  }
 }
 
 provider "google" {

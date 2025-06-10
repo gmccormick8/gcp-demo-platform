@@ -34,29 +34,32 @@ jobs:
       - name: Set up Cloud SDK
         uses: 'google-github-actions/setup-gcloud@v2'
 
-      - id: 'auth'
+      - id: 'auth-to-gcp'
         name: 'Authenticate to GCP'
         uses: 'google-github-actions/auth@v2.1.10'
         with:
             create_credentials_file: 'true'
             workload_identity_provider: '${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}'
             service_account: '${{ secrets.SERVICE_ACCOUNT }}'
-      - id: 'gcloud'
-        name: 'gcloud'
+      - id: 'run-gcloud-auth-login'
+        name: 'gcloud auth login'
         run: |-
-          gcloud auth login --brief --cred-file="${{ steps.auth.outputs.credentials_file_path }}"
+          gcloud auth login --brief --cred-file="${{ steps.auth-to-gcp.outputs.credentials_file_path }}" --force
           gcloud services list
           gcloud config set project ${{ vars.PROJECT_ID }}
 
-      - name: Set up Terraform
+      - id: 'setup-terraform'
+        name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.12.1
 
-      - name: Terraform Format Check
+      - id: 'terraform-fmt-check'
+        name: Terraform Format Check
         run: terraform fmt -recursive
 
-      - name: Initialize Terraform
+      - id: 'terraform-init'
+        name: Initialize Terraform
         env:
           TF_VAR_project_id: ${{ vars.PROJECT_ID }}
           TF_VAR_service_account: ${{ secrets.SERVICE_ACCOUNT }}
@@ -64,7 +67,8 @@ jobs:
           terraform init \
             -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
 
-      - name: Terraform Plan
+      - id: 'terraform-plan'
+        name: Terraform Plan
         env:
           TF_VAR_project_id: ${{ vars.PROJECT_ID }}
           TF_VAR_service_account: ${{ secrets.SERVICE_ACCOUNT }}

@@ -6,7 +6,7 @@ terraform {
     }
   }
   backend "gcs" {
-    bucket  = var.tf_state_bucket
+    bucket  = "prod-tf-state-hazel-delight-462019-i6"
     prefix  = "terraform/state"
     project = var.project_id
   }

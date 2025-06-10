@@ -5,7 +5,7 @@ terraform {
       version = "~> 4.0"
     }
   }
-  backend "gcs" { }
+  backend "gcs" {}
 }
 
 provider "google" {
@@ -14,7 +14,7 @@ provider "google" {
 
 
 variable "environment" {
-    default = "prod"
+  default = "prod"
 }
 
 locals {
@@ -30,6 +30,6 @@ resource "google_project_iam_member" "github_actions_roles" {
 
   project = "hazel-delight-462019-i6"
 
-  role    = each.key
-  member  = "serviceAccount:${local.service_account_id}@hazel-delight-462019-i6.iam.gserviceaccount.com"
+  role   = each.key
+  member = "serviceAccount:${local.service_account_id}@hazel-delight-462019-i6.iam.gserviceaccount.com"
 }

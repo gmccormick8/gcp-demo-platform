@@ -80,7 +80,7 @@ gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_NAME}" \
   --workload-identity-pool="${POOL_NAME}" \
   --display-name="GitHub Actions Provider - ${BRANCH}" \
   --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.ref=assertion.ref" \
-  --issuer-uri="https://token.actions.githubusercontent.com" \
+  --issuer-uri="https://token.actions.githubusercontent.com/" \
   --attribute-condition="attribute.ref=='refs/heads/${BRANCH}' && attribute.repository=='${REPO}'"
 
 # Create Service Account

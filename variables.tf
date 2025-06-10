@@ -3,7 +3,7 @@ variable "project_id" {
   type        = string
 }
 
-variable "service_account_email" {
+variable "service_account" {
   description = "The email of the service account to impersonate."
   type        = string  
 }

@@ -1,21 +1,5 @@
-terraform {
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "~> 4.0"
-    }
-  }
-  backend "gcs" {}
-}
-
-provider "google" {
-  project = var.project_id
-}
 
 
-variable "environment" {
-  default = "prod"
-}
 
 locals {
   service_account_id = "github-actions-sa-${var.environment}"

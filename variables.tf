@@ -3,6 +3,11 @@ variable "project_id" {
   type        = string
 }
 
+
+variable "environment" {
+  default = "prod"
+}
+
 variable "tf_state_bucket" {
   description = "The name of the Google Cloud Storage bucket for Terraform state."
   type        = string

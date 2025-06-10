@@ -55,6 +55,9 @@ POOL_NAME="${BRANCH}-github-pool-${random_number}"
 PROVIDER_NAME="github"
 REPO="gmccormick8/gcp-demo-platform"
 
+# Get Project number
+PROJECT_NUMBER=$(gcloud projects describe "${PROJECT_ID}" --format="value(projectNumber)")
+
 # Create Workload Identity Pool
 echo "Creating Workload Identity Pool..."
 gcloud iam workload-identity-pools create "${POOL_NAME}" \
@@ -85,30 +88,35 @@ gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_NAME}" \
 # Grant necessary roles to the service account
 echo "Granting minimal required roles..."
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="principalSet://iam.googleapis.com/${POOL_ID}/attribute.repository/${REPO}?attribute.ref=refs/heads/${BRANCH}" \
+  --member="principalSet://iam.googleapis.com/${POOL_ID}/attribute.repository/${REPO}/attribute.ref/refs/heads/${BRANCH}" \
   --role="roles/iam.workloadIdentityUser"
-
-# Grant Editor role
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="principalSet://iam.googleapis.com/${POOL_ID}/attribute.repository/${REPO}?attribute.ref=refs/heads/${BRANCH}" \
-  --role="roles/editor"
 
 # Create Terraform state bucket
 BUCKET_NAME="${BRANCH}-tf-state-${PROJECT_ID}"
 echo "Creating Terraform state bucket..."
-gcloud storage buckets create gs://"${BUCKET_NAME}" \
-  --project="${PROJECT_ID}" \
+gcloud storage buckets create gs://${BUCKET_NAME} \
+  --project=${PROJECT_ID} \
   --public-access-prevention \
   --uniform-bucket-level-access \
 
 sleep 10
 
-gcloud storage buckets update gs://"${BUCKET_NAME}" --versioning
+gcloud storage buckets update gs://${BUCKET_NAME} --versioning
+
+gcloud storage buckets add-iam-policy-binding "gs://${BUCKET_NAME}" \
+    --role="roles/storage.admin" \
+    --member="principalSet://iam.googleapis.com/${POOL_ID}/attribute.repository/${REPO}/attribute.ref/refs/heads/${BRANCH}"
+
+# Grant necessary roles to the service account
+echo "Granting minimal required roles..."
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="principalSet://iam.googleapis.com/${POOL_ID}/attribute.repository/${REPO}/attribute.ref/refs/heads/${BRANCH}" \
+  --role="roles/editor"
 
 # Output important information
 echo ""
 echo "================================================================"
-echo "                   SETUP COMPLETED SUCCESSFULLY                    "
+echo "                   SETUP COMPLETED SUCCESSFULLY                 "
 echo "================================================================"
 echo ""
 echo " IMPORTANT: Use the below to create GitHub Environment Secrets:"

@@ -53,7 +53,6 @@ done
 random_number=$((RANDOM % 99999 + 0))
 POOL_NAME="${BRANCH}-github-pool-${random_number}"
 PROVIDER_NAME="github"
-SERVICE_ACCOUNT_NAME="github-actions-sa-${BRANCH}"
 REPO="gmccormick8/gcp-demo-platform"
 
 # Create Workload Identity Pool
@@ -80,8 +79,8 @@ gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_NAME}" \
   --workload-identity-pool="${POOL_NAME}" \
   --display-name="GitHub Actions Provider - ${BRANCH}" \
   --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.ref=assertion.ref" \
-  --issuer-uri="https://token.actions.githubusercontent.com/" \
-  --attribute-condition="attribute.ref=='refs/heads/${BRANCH}' && attribute.repository=='${REPO}'"
+  --issuer-uri="https://token.actions.githubusercontent.com" \
+  --attribute-condition="assertion.ref=='refs/heads/${BRANCH}' && assertion.repository=='${REPO}'"
 
 # Create Service Account
 echo "Creating Service Account..."
@@ -94,21 +93,16 @@ sleep 10
 
 # Grant necessary roles to the service account
 echo "Granting minimal required roles..."
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="serviceAccount:${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
+gcloud projects add-iam-policy-binding "Assign Base Access" \
+  --project="${PROJECT_ID}" \
+  --member="principalSet://iam.googleapis.com/${POOL_ID}/attribute.repository/${REPO}?attribute.ref=refs/heads/${BRANCH}" \
   --role="roles/iam.workloadIdentityUser"
 
-# Grant Editor role to the service account
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="serviceAccount:${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
-  --role="roles/editor"
-
-# Allow authentication from GitHub Actions
-echo "Setting up Workload Identity Federation..."
-gcloud iam service-accounts add-iam-policy-binding "${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
+# Grant Editor role
+gcloud projects add-iam-policy-binding "Assign Editor Role" \
   --project="${PROJECT_ID}" \
-  --role="roles/iam.workloadIdentityUser" \
-  --member="principalSet://iam.googleapis.com/${POOL_ID}/attribute.repository/${REPO}?attribute.ref=refs/heads/${BRANCH}"
+  --member="principalSet://iam.googleapis.com/${POOL_ID}/attribute.repository/${REPO}?attribute.ref=refs/heads/${BRANCH}" \
+  --role="roles/editor"
 
 # Create Terraform state bucket
 BUCKET_NAME="${BRANCH}-tf-state-${PROJECT_ID}"
@@ -135,9 +129,6 @@ echo " Value: ${PROJECT_ID}"
 echo ""
 echo " Name: WORKLOAD_IDENTITY_PROVIDER"
 echo " Value: ${POOL_ID}/providers/${PROVIDER_NAME}"
-echo ""
-echo " Name: SERVICE_ACCOUNT"
-echo " Value: ${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 echo ""
 echo " Name: TF_STATE_BUCKET"
 echo " Value: ${BUCKET_NAME}"

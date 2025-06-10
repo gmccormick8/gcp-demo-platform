@@ -4,72 +4,51 @@ name: Terraform Deploy
 
 on:
   push:
-    branches: [ "prod" ]
+    branches: [ "dev", "staging", "prod" ]
   pull_request:
-    branches: [ "prod" ]
-
+    branches: [ "dev", "staging", "prod" ]
   workflow_dispatch:
 
-
 jobs:
-
-  build:
-
-    defaults:
-      run:
-        shell: bash
   
+  deploy:
     runs-on: ubuntu-latest
-    environment: ${{ github.ref_name}}
-
+    environment: ${{ github.ref_name }}
+    
     permissions:
       contents: 'read'
+      pages: 'write'
       id-token: 'write'
 
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Cloud SDK
-        uses: 'google-github-actions/setup-gcloud@v2'
-
-      - id: 'auth-to-gcp'
-        name: 'Authenticate to GCP'
-        uses: 'google-github-actions/auth@v2.1.10'
+      - name: Authenticate to GCP
+        id: auth
+        uses: google-github-actions/auth@v2
         with:
-            create_credentials_file: 'true'
-            workload_identity_provider: '${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}'
-            service_account: '${{ secrets.SERVICE_ACCOUNT }}'
-      - id: 'run-gcloud-auth-login'
-        name: 'gcloud auth login'
-        run: |-
-          gcloud auth login --brief --cred-file="${{ steps.auth-to-gcp.outputs.credentials_file_path }}" --force
-          gcloud services list
-          gcloud config set project ${{ vars.PROJECT_ID }}
-
-      - id: 'setup-terraform'
-        name: Set up Terraform
+          project_id: ${{ vars.PROJECT_ID }}
+          workload_identity_provider: '${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}'
+      
+      - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.12.1
 
-      - id: 'terraform-fmt-check'
-        name: Terraform Format Check
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Format
         run: terraform fmt -recursive
 
-      - id: 'terraform-init'
-        name: Initialize Terraform
+      - name: Terraform Init
         env:
           TF_VAR_project_id: ${{ vars.PROJECT_ID }}
-          TF_VAR_service_account: ${{ secrets.SERVICE_ACCOUNT }}
         run: |
           terraform init \
             -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
 
-      - id: 'terraform-plan'
-        name: Terraform Plan
+      - name: Terraform Plan
         env:
           TF_VAR_project_id: ${{ vars.PROJECT_ID }}
-          TF_VAR_service_account: ${{ secrets.SERVICE_ACCOUNT }}
-        run: terraform plan
+        run: terraform plan 
+    

@@ -1,0 +1,33 @@
+name: Enforce Branch Merge Policy
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited, ready_for_review]
+    branches:
+      - prod
+      - staging
+
+jobs:
+  enforce-branch-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Block merges from dev directly to prod
+        if: github.base_ref == 'prod' && github.head_ref == 'dev'
+        run: |
+          echo "Merging directly from dev to prod is not allowed. Merge dev → staging → prod."
+          exit 1
+
+      - name: Block non-staging merges to prod
+        if: github.base_ref == 'prod' && github.head_ref != 'staging'
+        run: |
+          echo "Only merges from staging to prod are allowed."
+          exit 1
+
+      - name: Block non-dev merges to staging
+        if: github.base_ref == 'staging' && github.head_ref != 'dev'
+        run: |
+          echo "Only merges from dev to staging are allowed."
+          exit 1
+
+      - name: Allow valid merges
+        run: echo "Merge direction is valid."

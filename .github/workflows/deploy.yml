@@ -2,9 +2,9 @@ name: GCP Demo - Terraform Infrastructure Pipeline
 
 on:
   push:
-    branches: [ "prod", "staging", "dev" ]
+    branches: [ "dev" ]
   pull_request_target:
-    branches: [ "prod", "staging", "dev" ]
+    branches: [ "prod", "staging" ]
   workflow_dispatch:
 
 jobs:

@@ -1,0 +1,67 @@
+name: GCP Demo - Terraform Destroy Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to destroy (dev/staging/prod)'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      confirmation:
+        description: 'Type the environment name again to confirm destruction'
+        required: true
+        type: string
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    
+    # Only proceed if confirmation matches environment
+    if: inputs.confirmation == inputs.environment
+    
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ secrets.PROJECT_ID }}
+          workload_identity_provider: '${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}'
+      
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.12.0'
+
+      - name: Terraform Init
+        env:
+          TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+
+      - name: Terraform Plan Destroy
+        env:
+          TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
+        run: terraform plan -destroy -out=tfplan
+
+      - name: Wait for Manual Approval
+        run: |
+          echo "DESTRUCTION PLANNED FOR ${{ inputs.environment }} ENVIRONMENT"
+          echo "Review the plan above carefully before proceeding."
+          sleep 30
+
+      - name: Terraform Destroy
+        env:
+          TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
+        run: terraform apply -auto-approve tfplan

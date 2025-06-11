@@ -1,4 +1,4 @@
-name: GCP Demo - Terraform Infrastructure Pipeline
+name: Terraform Infrastructure Pipeline
 
 on:
   push:

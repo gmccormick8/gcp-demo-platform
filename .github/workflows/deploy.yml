@@ -80,9 +80,6 @@ jobs:
     permissions:
       issues: write
       pull-requests: write
-    if: |
-      needs.plan.result == 'success' && 
-      (github.ref_name == 'prod' || github.ref_name == 'staging')
     steps:
       - name: Manual Approval
         uses: trstringer/manual-approval@v1
@@ -98,15 +95,6 @@ jobs:
 
   apply:
     needs: [plan, manual-approval]
-    if: |
-      needs.plan.result == 'success' &&
-      (
-        github.ref_name == 'dev' ||
-        (
-          (github.ref_name == 'prod' || github.ref_name == 'staging') &&
-          needs.manual-approval.result == 'success'
-        )
-      )
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name }}
     

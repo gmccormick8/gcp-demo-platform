@@ -7,13 +7,4 @@ terraform {
       version = "~> 6.30"
     }
   }
-
-  backend "gcs" {
-    bucket = ""
-    prefix = "terraform/state"
-  }
-}
-
-provider "google" {
-  project = var.project_id
 }

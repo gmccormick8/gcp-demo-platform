@@ -2,9 +2,9 @@ name: Terraform Infrastructure Pipeline
 
 on:
   push:
-    branches: [ "prod", "staging", "dev" ]
+    branches: [ "dev" ]
   pull_request_target:
-    branches: [ "prod", "staging", "dev" ]
+    branches: [ "prod", "staging" ]
   workflow_dispatch:
 
 jobs:
@@ -124,6 +124,8 @@ jobs:
       
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.12.0'
 
       - name: Terraform Init
         env:

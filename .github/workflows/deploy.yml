@@ -71,11 +71,14 @@ jobs:
             echo "plan_status=error" >> "$GITHUB_OUTPUT"
             echo "error_message=Terraform plan failed" >> "$GITHUB_OUTPUT"
             exit 1
-          else
+          elif [ $exit_code -eq 2 ]; then
             echo "plan_status=has_changes" >> "$GITHUB_OUTPUT"
-            echo "error_message=" >> "$GITHUB_OUTPUT"
             echo "Changes detected in plan"
             terraform show -no-color tfplan > draft-tfplan.txt
+          else
+            echo "plan_status=error" >> "$GITHUB_OUTPUT"
+            echo "error_message=Unexpected exit code: $exit_code" >> "$GITHUB_OUTPUT"
+            exit 1
           fi
           
           # Create human-readable plan output

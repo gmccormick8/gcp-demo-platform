@@ -53,7 +53,6 @@ jobs:
       - name: Terraform Plan
         env:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
-          # Prevent prompts in CI/CD environment
           TF_IN_AUTOMATION: "true"
         run: |
           # Create plan with detailed exit codes:
@@ -65,12 +64,17 @@ jobs:
             echo "Terraform plan failed"
             exit 1
           fi
+          
+          # Create human-readable plan output using terraform show
+          terraform show -no-color tfplan > draft-tfplan.txt
 
       - name: Upload Terraform Plan
         uses: actions/upload-artifact@v4
         with:
-          name: tfplan
-          path: tfplan
+          name: terraform-plan
+          path: |
+            tfplan
+            draft-tfplan.txt
           retention-days: 1
 
   manual-approval:
@@ -90,7 +94,7 @@ jobs:
           issue-title: 'Manual Approval for ${{ github.ref_name }} Deployment'
           issue-body: |
             Please approve this deployment to ${{ github.ref_name }}.
-            The Terraform plan is available for review in the artifacts.
+            The Terraform plan is available for review in the artifacts as "draft-tfplan.txt".
           fail-on-denial: true
 
   apply:

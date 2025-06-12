@@ -17,7 +17,7 @@ on:
         type: string
 
 jobs:
-  destroy:
+  plan:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     
@@ -46,6 +46,7 @@ jobs:
       - name: Terraform Init
         env:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
+          TF_IN_AUTOMATION: "true"
         run: |
           terraform init \
             -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
@@ -53,15 +54,75 @@ jobs:
       - name: Terraform Plan Destroy
         env:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
-        run: terraform plan -destroy -out=tfplan
-
-      - name: Wait for Manual Approval
+          TF_IN_AUTOMATION: "true"
         run: |
-          echo "DESTRUCTION PLANNED FOR ${{ inputs.environment }} ENVIRONMENT"
-          echo "Review the plan above carefully before proceeding."
-          sleep 30
+          # Create destroy plan
+          terraform plan -destroy -out=tfplan -no-color
+          
+          # Create human-readable plan output
+          terraform show -no-color tfplan > draft-tfplan.txt
 
-      - name: Terraform Destroy
+      - name: Upload Terraform Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: |
+            tfplan
+            draft-tfplan.txt
+          retention-days: 1
+
+  manual-approval:
+    needs: plan
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Manual Approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ secrets.GITHUB_TOKEN }}
+          approvers: ${{ secrets.APPROVERS}}
+          minimum-approvals: 1
+          issue-title: 'Manual Approval for ${{ github.ref_name }} Destruction'
+          issue-body: |
+            Review this ${{ github.ref_name }} destroy plan carefully before proceeding!
+            The Terraform plan is available for review in the artifacts as "draft-tfplan.txt".
+          fail-on-denial: true
+
+  destroy:
+    needs: manual-approval
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ secrets.PROJECT_ID }}
+          workload_identity_provider: '${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}'
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.12.0'
+
+      - name: Terraform Init
         env:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
+          TF_IN_AUTOMATION: "true"
+        run: terraform init \
+          -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+
+      - name: Terraform Apply
+        env:
+          TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
+          TF_IN_AUTOMATION: "true"
         run: terraform apply -auto-approve tfplan

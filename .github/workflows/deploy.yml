@@ -16,9 +16,6 @@ jobs:
       contents: 'read'
       id-token: 'write'
 
-    outputs:
-      changes: ${{ steps.plan.outputs.changes }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -39,6 +36,8 @@ jobs:
           terraform_version: '1.12.0'
 
       - name: Terraform Format
+        env:
+          TF_IN_AUTOMATION: "true"
         run: terraform fmt -check -recursive
 
       - name: Terraform Init
@@ -51,39 +50,30 @@ jobs:
       - name: Terraform Validate
         env:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
+          TF_IN_AUTOMATION: "true"
         run: terraform validate -no-color
 
       - name: Terraform Plan
         id: plan
-        uses: dflook/terraform-plan@v1
-        with:
-          path: .
-          backend_config: |
-            bucket=${{ secrets.TF_STATE_BUCKET }}
-          variables: |
-            project_id=${{ secrets.PROJECT_ID }}
+        env:
+          TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
+          TF_IN_AUTOMATION: "true"
+        run: |
+          terraform plan -out=terraform-plan.tfplan -no-color
+          terraform show -no-color terraform.tfplan >> $GITHUB_STEP_SUMMARY
+
 
       - name: Upload Terraform Plan
-        if: steps.plan.outputs.changes == 'true'
+        if: steps.plan.outputs.plan_status == 'has_changes'
         uses: actions/upload-artifact@v4
         with:
-          name: plan
-          path: .terraform/plan
+          name: terraform-plan
+          path: |
+            terraform-plan.tfplan
           retention-days: 1
-
-  no-changes:
-    needs: plan
-    if: needs.plan.outputs.changes == 'false'
-    runs-on: ubuntu-latest
-    steps:
-      - name: No Changes Detected
-        run: |
-          echo "No changes detected in Terraform plan"
-          echo "Workflow completed successfully"
 
   manual-approval:
     needs: plan
-    if: needs.plan.outputs.changes == 'true'
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name }}
     permissions:
@@ -98,14 +88,12 @@ jobs:
           minimum-approvals: 1
           issue-title: 'Manual Approval for ${{ github.ref_name }} Deployment'
           issue-body: |
-            Please approve this deployment to ${{ github.ref_name }}.
-            The Terraform plan is available for review in the artifacts as "draft-tfplan.txt".
+            Please review this deployment to ${{ github.ref_name }}.
           fail-on-denial: true
 
   apply:
     needs: [plan, manual-approval]
-    if: |
-      needs.plan.outputs.changes == 'true' && 
+    if:
       needs.manual-approval.result == 'success'
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name }}
@@ -139,15 +127,10 @@ jobs:
       - name: Download Terraform Plan
         uses: actions/download-artifact@v4
         with:
-          name: plan
-          path: .terraform/plan
+          name: terraform-plan
 
       - name: Terraform Apply
-        uses: dflook/terraform-apply@v1
-        with:
-          path: .
-          auto_approve: true
-          backend_config: |
-            bucket=${{ secrets.TF_STATE_BUCKET }}
-          variables: |
-            project_id=${{ secrets.PROJECT_ID }}
+        env:
+          TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
+          TF_IN_AUTOMATION: "true"
+        run: terraform apply -auto-approve terraform-plan.tfplan

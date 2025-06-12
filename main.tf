@@ -1,8 +1,8 @@
 # Create a VPC network and subnets
 module "demo-vpc" {
-  source       = "./modules/network"
-  project_id   = var.project_id
-  network_name = "demo"
+  source                          = "./modules/network"
+  project_id                      = var.project_id
+  network_name                    = "demo"
   delete_default_routes_on_create = false
 
   subnets = {

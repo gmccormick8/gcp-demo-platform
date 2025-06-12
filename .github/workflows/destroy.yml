@@ -56,17 +56,17 @@ jobs:
           TF_IN_AUTOMATION: "true"
         run: |
           # Create destroy plan
-          terraform plan -destroy -out=tfplan -no-color
+          terraform plan -destroy -out=terraform-plan.tfplan -no-color
           
           # Create human-readable plan output
-          terraform show -no-color tfplan > draft-tfplan.txt
+          terraform show -no-color terraform-plan.tfplan > draft-tfplan.txt
 
       - name: Upload Terraform Plan
         uses: actions/upload-artifact@v4
         with:
-          name: tfplan
+          name: terraform-plan
           path: |
-            tfplan
+            terraform-plan.tfplan
           retention-days: 1
 
       - name: Upload Readable Terraform Plan
@@ -132,10 +132,10 @@ jobs:
       - name: Download Terraform Plan
         uses: actions/download-artifact@v4
         with:
-          name: tfplan
+          name: terraform-plan
 
       - name: Terraform Apply
         env:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
           TF_IN_AUTOMATION: "true"
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve terraform-plan.tfplan

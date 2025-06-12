@@ -17,8 +17,7 @@ jobs:
       id-token: 'write'
 
     outputs:
-      plan_status: ${{ steps.plan.outputs.plan_status }}
-      error_message: ${{ steps.plan.outputs.error_message }}
+      changes: ${{ steps.plan.outputs.changes }}
 
     steps:
       - name: Checkout code
@@ -56,54 +55,25 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-        env:
-          TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
-          TF_IN_AUTOMATION: "true"
-        run: |
-          set +e
-          terraform plan -out=tfplan -no-color -detailed-exitcode
-          exitcode=$?
-          set -e
-          
-          if [ $exitcode -eq 0 ]; then
-            echo "plan_status=no_changes" >> "$GITHUB_OUTPUT"
-            echo "No changes detected in plan"
-          elif [ $exitcode -eq 1 ]; then
-            echo "plan_status=error" >> "$GITHUB_OUTPUT"
-            echo "error_message=Terraform plan failed" >> "$GITHUB_OUTPUT"
-            exit 1
-          elif [ $exitcode -eq 2 ]; then
-            echo "plan_status=has_changes" >> "$GITHUB_OUTPUT"
-            echo "Changes detected in plan"
-            # Create human-readable plan output
-            terraform show -no-color tfplan > draft-tfplan.txt
-          else
-            echo "plan_status=error" >> "$GITHUB_OUTPUT"
-            echo "error_message=Unexpected exit code: $exitcode" >> "$GITHUB_OUTPUT"
-            exit 1
-          fi
-          
-      - name: Upload Terraform Plan
-        if: steps.plan.outputs.plan_status == 'has_changes'
-        uses: actions/upload-artifact@v4
+        uses: dflook/terraform-plan@v1
         with:
-          name: tfplan
-          path: |
-            tfplan
-          retention-days: 1
+          path: .
+          backend_config: |
+            bucket=${{ secrets.TF_STATE_BUCKET }}
+          variables: |
+            project_id=${{ secrets.PROJECT_ID }}
 
-      - name: Upload Readable Terraform Plan
-        if: steps.plan.outputs.plan_status == 'has_changes'
+      - name: Upload Terraform Plan
+        if: steps.plan.outputs.changes == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: draft-tfplan
-          path: |
-            draft-tfplan.txt
+          name: plan
+          path: .terraform/plan
           retention-days: 1
 
   no-changes:
     needs: plan
-    if: needs.plan.outputs.plan_status == 'no_changes'
+    if: needs.plan.outputs.changes == 'false'
     runs-on: ubuntu-latest
     steps:
       - name: No Changes Detected
@@ -113,7 +83,7 @@ jobs:
 
   manual-approval:
     needs: plan
-    if: needs.plan.outputs.plan_status == 'has_changes'
+    if: needs.plan.outputs.changes == 'true'
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name }}
     permissions:
@@ -135,7 +105,7 @@ jobs:
   apply:
     needs: [plan, manual-approval]
     if: |
-      needs.plan.outputs.plan_status == 'has_changes' && 
+      needs.plan.outputs.changes == 'true' && 
       needs.manual-approval.result == 'success'
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name }}
@@ -169,9 +139,15 @@ jobs:
       - name: Download Terraform Plan
         uses: actions/download-artifact@v4
         with:
-          name: tfplan
+          name: plan
+          path: .terraform/plan
 
       - name: Terraform Apply
-        env:
-          TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
-        run: terraform apply -auto-approve tfplan
+        uses: dflook/terraform-apply@v1
+        with:
+          path: .
+          auto_approve: true
+          backend_config: |
+            bucket=${{ secrets.TF_STATE_BUCKET }}
+          variables: |
+            project_id=${{ secrets.PROJECT_ID }}

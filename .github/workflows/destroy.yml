@@ -21,8 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     
-    # Only proceed if confirmation matches environment
-    if: inputs.confirmation == inputs.environment
+    # Only proceed if confirmation matches environment and branch name matches environment
+    if: inputs.confirmation == inputs.environment && endsWith(github.ref_name, inputs.environment)
     
     permissions:
       contents: 'read'
@@ -81,7 +81,8 @@ jobs:
   manual-approval:
     needs: plan
     runs-on: ubuntu-latest
-    environment: ${{ github.ref_name }}
+    environment: ${{ inputs.environment }}
+    if: inputs.confirmation == inputs.environment && endsWith(github.ref_name, inputs.environment)
     permissions:
       issues: write
       pull-requests: write
@@ -92,16 +93,17 @@ jobs:
           secret: ${{ secrets.GITHUB_TOKEN }}
           approvers: ${{ secrets.APPROVERS}}
           minimum-approvals: 1
-          issue-title: 'Manual Approval for ${{ github.ref_name }} Destruction'
+          issue-title: 'Manual Approval for ${{ inputs.environment }} Destruction'
           issue-body: |
-            Review this ${{ github.ref_name }} destroy plan carefully before proceeding!
+            Review this ${{ inputs.environment }} destroy plan carefully before proceeding!
             The Terraform plan is available for review in the artifacts as "draft-tfplan.txt".
           fail-on-denial: true
 
   destroy:
     needs: manual-approval
     runs-on: ubuntu-latest
-    environment: ${{ github.ref_name }}
+    environment: ${{ inputs.environment }}
+    if: inputs.confirmation == inputs.environment && endsWith(github.ref_name, inputs.environment)
     permissions:
       contents: 'read'
       id-token: 'write'

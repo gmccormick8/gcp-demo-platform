@@ -60,9 +60,9 @@ jobs:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
           TF_IN_AUTOMATION: "true"
         run: |
-          terraform plan -out=tfplan -no-color -detailed-exitcode
-          exit_code=$?
-          
+          exit_code=0
+          terraform plan -out=tfplan -no-color -detailed-exitcode || exit_code=$?
+
           if [ $exit_code -eq 0 ]; then
             echo "plan_status=no_changes" >> "$GITHUB_OUTPUT"
             echo "error_message=" >> "$GITHUB_OUTPUT"

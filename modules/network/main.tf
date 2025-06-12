@@ -1,9 +1,10 @@
 # VPC Network
 resource "google_compute_network" "vpc" {
-  name                    = var.network_name
-  auto_create_subnetworks = false
-  project                 = var.project_id
-  routing_mode            = var.routing_mode
+  name                            = var.network_name
+  auto_create_subnetworks         = false
+  project                         = var.project_id
+  routing_mode                    = var.routing_mode
+  delete_default_routes_on_create = var.delete_default_routes_on_create
 }
 
 # Subnets

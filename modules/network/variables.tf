@@ -45,3 +45,9 @@ variable "cloud_nat_configs" {
   type        = set(string)
   default     = []
 }
+
+variable "delete_default_routes_on_create" {
+  description = "Whether to delete the default routes when creating the network"
+  type        = bool
+  default     = false
+}

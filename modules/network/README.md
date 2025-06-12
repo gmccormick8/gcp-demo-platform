@@ -5,6 +5,7 @@ This module creates a Google Cloud Platform VPC network with associated resource
 ## Features
 
 - Creates a custom mode VPC network
+- Preserves default GCP firewall rules
 - Supports multiple subnet configurations
 - Configures Cloud NAT and Cloud Router for internet egress
 - Flexible firewall rule management
@@ -117,6 +118,7 @@ module "network" {
 - `routing_mode` - Network routing mode ("GLOBAL" or "REGIONAL", defaults to "GLOBAL")
 - `firewall_rules` - Map of firewall rule configurations
 - `cloud_nat_configs` - Set of regions where Cloud NAT should be enabled
+- `delete_default_routes_on_create` - Whether to delete default routes (defaults to false)
 
 ### Subnet Configuration
 
@@ -163,8 +165,10 @@ Each firewall rule supports:
 
 ## Notes
 
+- Default GCP VPC firewall rules are preserved (default-allow-internal, default-allow-ssh, default-allow-rdp, default-allow-icmp)
 - All subnets are created with Private Google Access enabled by default
 - Cloud NAT is configured with automatic IP allocation
+- Default routes (0.0.0.0/0) are preserved unless explicitly configured
 - Firewall rules support both tagged and untagged instances
 
 ## License

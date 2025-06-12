@@ -99,7 +99,7 @@ jobs:
           fail-on-denial: true
 
   destroy:
-    needs: manual-approval
+    needs: [plan, manual-approval]
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     if: inputs.confirmation == inputs.environment && endsWith(github.ref_name, inputs.environment)
@@ -128,6 +128,11 @@ jobs:
         run: |
           terraform init \
             -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+
+      - name: Download Terraform Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
 
       - name: Terraform Apply
         env:

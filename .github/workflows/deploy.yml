@@ -17,7 +17,8 @@ jobs:
       id-token: 'write'
 
     outputs:
-      exit_code: ${{ steps.plan.outputs.exit_code }}
+      plan_status: ${{ steps.plan.outputs.plan_status }}
+      error_message: ${{ steps.plan.outputs.error_message }}
 
     steps:
       - name: Checkout code
@@ -59,19 +60,25 @@ jobs:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
           TF_IN_AUTOMATION: "true"
         run: |
-          # Create plan with detailed exit codes:
-          # 0 = No changes
-          # 1 = Error
-          # 2 = Changes present
           terraform plan -detailed-exitcode -out=tfplan -no-color
           exit_code=$?
-          echo "exit_code='$exit_code'" >> "$GITHUB_OUTPUT"
-          if [ $exit_code -eq 1 ]; then
-            echo "Terraform plan failed"
+          
+          if [ $exit_code -eq 0 ]; then
+            echo "plan_status=no_changes" >> "$GITHUB_OUTPUT"
+            echo "error_message=" >> "$GITHUB_OUTPUT"
+            echo "No changes detected in plan"
+          elif [ $exit_code -eq 1 ]; then
+            echo "plan_status=error" >> "$GITHUB_OUTPUT"
+            echo "error_message=Terraform plan failed" >> "$GITHUB_OUTPUT"
             exit 1
+          else
+            echo "plan_status=has_changes" >> "$GITHUB_OUTPUT"
+            echo "error_message=" >> "$GITHUB_OUTPUT"
+            echo "Changes detected in plan"
+            terraform show -no-color tfplan > draft-tfplan.txt
           fi
           
-          # Create human-readable plan output using terraform show
+          # Create human-readable plan output
           terraform show -no-color tfplan > draft-tfplan.txt
 
       - name: Upload Terraform Plan
@@ -90,9 +97,19 @@ jobs:
             draft-tfplan.txt
           retention-days: 1
 
+  no-changes:
+    needs: plan
+    if: needs.plan.outputs.plan_status == 'no_changes'
+    runs-on: ubuntu-latest
+    steps:
+      - name: No Changes Detected
+        run: |
+          echo "No changes detected in Terraform plan"
+          echo "Workflow completed successfully"
+
   manual-approval:
     needs: plan
-    if: needs.plan.outputs.exit_code == '2'
+    if: needs.plan.outputs.plan_status == 'has_changes'
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name }}
     permissions:
@@ -113,7 +130,9 @@ jobs:
 
   apply:
     needs: [plan, manual-approval]
-    if: (needs.plan.outputs.exit_code == '2' && needs.manual-approval.result == 'success')
+    if: |
+      needs.plan.outputs.plan_status == 'has_changes' && 
+      needs.manual-approval.result == 'success'
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name }}
     

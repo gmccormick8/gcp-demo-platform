@@ -46,7 +46,6 @@ jobs:
       - name: Terraform Init
         env:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
-          TF_IN_AUTOMATION: "true"
         run: |
           terraform init \
             -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
@@ -126,7 +125,6 @@ jobs:
       - name: Terraform Init
         env:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
-          TF_IN_AUTOMATION: "true"
         run: terraform init \
           -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
 

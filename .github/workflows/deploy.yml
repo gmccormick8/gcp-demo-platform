@@ -75,7 +75,7 @@ jobs:
       - name: Output Plan Summary
         id: plan_summary
         run:
-          echo ${{ steps.plan_markdown.outputs.markdown }} >> $GITHUB_OUTPUT 
+          echo "${{ steps.plan_markdown.outputs.markdown }}" >> $GITHUB_OUTPUT
 
       - name: Upload Terraform Plan
         uses: actions/upload-artifact@v4

@@ -58,7 +58,7 @@ jobs:
           # Create destroy plan
           terraform plan -destroy -out=terraform-plan.tfplan -no-color
           
-          # Create human-readable plan output
+          # Output in human-readable format
           terraform show -no-color terraform-plan.tfplan > draft-tfplan.txt
 
       - name: Upload Terraform Plan
@@ -67,14 +67,6 @@ jobs:
           name: terraform-plan
           path: |
             terraform-plan.tfplan
-          retention-days: 1
-
-      - name: Upload Readable Terraform Plan
-        uses: actions/upload-artifact@v4
-        with:
-          name: draft-tfplan
-          path: |
-            draft-tfplan.txt
           retention-days: 1
 
   manual-approval:

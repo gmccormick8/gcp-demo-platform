@@ -58,8 +58,11 @@ jobs:
           # Create destroy plan
           terraform plan -destroy -out=terraform-plan.tfplan -no-color
           
-          # Output in human-readable format
-          terraform show -no-color terraform-plan.tfplan > draft-tfplan.txt
+      - name: Output Readable Plan
+        uses: borchero/terraform-plan-comment@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          planfile: terraform-plan.tfplan
 
       - name: Upload Terraform Plan
         uses: actions/upload-artifact@v4

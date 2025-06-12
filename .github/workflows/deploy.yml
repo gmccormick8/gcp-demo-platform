@@ -16,6 +16,9 @@ jobs:
       contents: 'read'
       id-token: 'write'
 
+    outputs:
+      markdown: ${{ steps.plan_summary.outputs.markdown }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -62,10 +65,17 @@ jobs:
           terraform plan -out=terraform-plan.tfplan -no-color
 
       - name: Output Readable Plan
+        id: plan_markdown
         uses: borchero/terraform-plan-comment@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           planfile: terraform-plan.tfplan
+          skip-empty: true
+
+      - name: Output Plan Summary
+        id: plan_summary
+        run:
+          echo ${{ steps.plan_markdown.outputs.markdown }} >> $GITHUB_OUTPUT 
 
       - name: Upload Terraform Plan
         uses: actions/upload-artifact@v4
@@ -92,6 +102,7 @@ jobs:
           issue-title: 'Manual Approval for ${{ github.ref_name }} Deployment'
           issue-body: |
             Please review this deployment to ${{ github.ref_name }}.
+            ${{ needs.plan.outputs.markdown }}
           fail-on-denial: true
 
   apply:

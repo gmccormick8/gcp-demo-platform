@@ -65,7 +65,7 @@ jobs:
           # 2 = Changes present
           terraform plan -detailed-exitcode -out=tfplan -no-color
           exit_code=$?
-          echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
+          echo "exit_code='$exit_code'" >> "$GITHUB_OUTPUT"
           if [ $exit_code -eq 1 ]; then
             echo "Terraform plan failed"
             exit 1

@@ -65,9 +65,16 @@ jobs:
       - name: Upload Terraform Plan
         uses: actions/upload-artifact@v4
         with:
-          name: terraform-plan
+          name: tfplan
           path: |
             tfplan
+          retention-days: 1
+
+      - name: Upload Readable Terraform Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: draft-tfplan
+          path: |
             draft-tfplan.txt
           retention-days: 1
 

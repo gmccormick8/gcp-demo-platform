@@ -17,7 +17,7 @@ jobs:
       id-token: 'write'
 
     outputs:
-      markdown: ${{ steps.plan_summary.outputs.markdown }}
+      markdown: ${{ steps.plan_markdown.outputs.markdown }}
 
     steps:
       - name: Checkout code
@@ -71,11 +71,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           planfile: terraform-plan.tfplan
           skip-empty: true
-
-      - name: Output Plan Summary
-        id: plan_summary
-        run:
-          echo "${{ steps.plan_markdown.outputs.markdown }}" >> $GITHUB_OUTPUT
 
       - name: Upload Terraform Plan
         uses: actions/upload-artifact@v4

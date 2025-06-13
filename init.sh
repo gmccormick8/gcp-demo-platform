@@ -112,7 +112,7 @@ gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
 
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="principal://iam.googleapis.com/${POOL_ID}/subject/repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}" \
-  --role="roles/compute.firewallAdmin"
+  --role="roles/compute.securityAdmin"
 
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="principal://iam.googleapis.com/${POOL_ID}/subject/repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}" \

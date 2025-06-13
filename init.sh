@@ -84,9 +84,9 @@ gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_NAME}" \
   --location="global" \
   --workload-identity-pool="${POOL_NAME}" \
   --display-name="GitHub Provider - ${BRANCH}" \
-  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.ref=assertion.ref" \
+  --attribute-mapping="google.subject=assertion.sub" \
   --issuer-uri="https://token.actions.githubusercontent.com" \
-  --attribute-condition="assertion.ref=='refs/heads/${BRANCH}' && assertion.repository=='${REPO}'"
+  --attribute-condition="assertion.sub=='repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}'"
 
 # Grant necessary roles
 echo "Granting minimal required roles..."

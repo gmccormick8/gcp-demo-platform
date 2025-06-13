@@ -91,12 +91,40 @@ gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_NAME}" \
 # Grant necessary roles
 echo "Granting minimal required roles..."
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="principalSet://iam.googleapis.com/${POOL_ID}/*" \
+  --member="principal://iam.googleapis.com/${POOL_ID}/subject/repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}" \
   --role="roles/iam.workloadIdentityUser"
 
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="principalSet://iam.googleapis.com/${POOL_ID}/*" \
+  --member="principal://iam.googleapis.com/${POOL_ID}/subject/repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}" \
+  --role="roles/monitoring.metricWriter"
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="principal://iam.googleapis.com/${POOL_ID}/subject/repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}" \
+  --role="roles/logging.logWriter"
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="principal://iam.googleapis.com/${POOL_ID}/subject/repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}" \
+  --role="roles/storage.admin"
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="principal://iam.googleapis.com/${POOL_ID}/subject/repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}" \
   --role="roles/compute.networkAdmin"
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="principal://iam.googleapis.com/${POOL_ID}/subject/repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}" \
+  --role="roles/compute.firewallAdmin"
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="principal://iam.googleapis.com/${POOL_ID}/subject/repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}" \
+  --role="roles/iam.serviceAccountAdmin"
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="principal://iam.googleapis.com/${POOL_ID}/subject/repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}" \
+  --role="roles/container.admin"
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="principal://iam.googleapis.com/${POOL_ID}/subject/repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}" \
+  --role="roles/gkehub.admin"
 
 # Create Terraform state bucket
 BUCKET_NAME="${BRANCH}-tf-state-${PROJECT_ID}"
@@ -109,11 +137,6 @@ gcloud storage buckets create gs://${BUCKET_NAME} \
 sleep 10
 
 gcloud storage buckets update gs://${BUCKET_NAME} --versioning
-
-# Grant project-wide roles with group condition
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="principalSet://iam.googleapis.com/${POOL_ID}/*" \
-  --role="roles/editor" 
 
 # Output important information
 echo ""

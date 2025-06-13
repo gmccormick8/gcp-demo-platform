@@ -28,6 +28,9 @@ jobs:
       contents: 'read'
       id-token: 'write'
 
+    outputs:
+      markdown: ${{ steps.plan_markdown.outputs.markdown }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -59,10 +62,12 @@ jobs:
           terraform plan -destroy -out=terraform-plan.tfplan -no-color
           
       - name: Output Readable Plan
+        id: plan_markdown
         uses: borchero/terraform-plan-comment@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           planfile: terraform-plan.tfplan
+          skip-empty: true
 
       - name: Upload Terraform Plan
         uses: actions/upload-artifact@v4
@@ -90,7 +95,7 @@ jobs:
           issue-title: 'Manual Approval for ${{ inputs.environment }} Destruction'
           issue-body: |
             Review this ${{ inputs.environment }} destroy plan carefully before proceeding!
-            The Terraform plan is available for review in the artifacts as "draft-tfplan.txt".
+            ${{ needs.plan.outputs.markdown }}
           fail-on-denial: true
 
   destroy:

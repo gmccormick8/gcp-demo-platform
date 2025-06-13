@@ -42,6 +42,9 @@ api_array=(
   "iamcredentials.googleapis.com"
   "cloudresourcemanager.googleapis.com"
   "storage.googleapis.com"
+  "container.googleapis.com"
+  "gkehub.googleapis.com"
+  "anthos.googleapis.com"
 )
 
 for api in "${api_array[@]}"; do
@@ -85,11 +88,15 @@ gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_NAME}" \
   --issuer-uri="https://token.actions.githubusercontent.com" \
   --attribute-condition="assertion.ref=='refs/heads/${BRANCH}' && assertion.repository=='${REPO}'"
 
-# Grant necessary roles to the service account
+# Grant necessary roles
 echo "Granting minimal required roles..."
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="principalSet://iam.googleapis.com/${POOL_ID}/*" \
   --role="roles/iam.workloadIdentityUser"
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="principalSet://iam.googleapis.com/${POOL_ID}/*" \
+  --role="roles/compute.networkAdmin"
 
 # Create Terraform state bucket
 BUCKET_NAME="${BRANCH}-tf-state-${PROJECT_ID}"

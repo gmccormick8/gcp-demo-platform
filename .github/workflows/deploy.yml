@@ -24,7 +24,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0      
+          fetch-depth: 0        
       
       - name: Authenticate to GCP
         id: auth
@@ -32,9 +32,11 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.TERRAFORM_SA_EMAIL }}
-          create_credentials_file: true
           token_format: 'access_token'
+          create_credentials_file: true
           audience: 'https://github.com/gmccormick8'
+          id_token_audience: 'iam.googleapis.com'
+
       
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
@@ -150,8 +152,8 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.TERRAFORM_SA_EMAIL }}
-          create_credentials_file: true
           token_format: 'access_token'
+          create_credentials_file: true
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3

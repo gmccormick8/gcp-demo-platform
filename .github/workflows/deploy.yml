@@ -21,6 +21,11 @@ jobs:
       plan_summary: ${{ steps.plan_summary.outputs.summary }}
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Authenticate to Google Cloud
         id: gcp-auth
         uses: google-github-actions/auth@v2
@@ -31,12 +36,7 @@ jobs:
       - name: Configure gcloud CLI
         run: |
           gcloud config set project ${{ secrets.PROJECT_ID }}
-          gcloud auth list
-
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0        
+          gcloud auth list      
       
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3

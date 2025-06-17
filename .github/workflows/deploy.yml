@@ -21,6 +21,18 @@ jobs:
       plan_summary: ${{ steps.plan_summary.outputs.summary }}
 
     steps:
+      - name: Authenticate to Google Cloud
+        id: gcp-auth
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Configure gcloud CLI
+        run: |
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+          gcloud auth list
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:

@@ -23,7 +23,7 @@ jobs:
     steps:
       - name: Authenticate to Google Cloud
         id: gcp-auth
-        uses: google-github-actions/auth@v1
+        uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
@@ -37,18 +37,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0        
-      
-      - name: Authenticate to GCP
-        id: auth
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.TERRAFORM_SA_EMAIL }}
-          token_format: 'access_token'
-          create_credentials_file: true
-          audience: 'https://github.com/gmccormick8'
-          id_token_audience: 'iam.googleapis.com'
-
       
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3

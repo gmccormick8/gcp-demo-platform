@@ -9,6 +9,9 @@ locals {
       pods_network_name     = "demo-east-pods"
       services_network_name = "demo-east-services"
       master_ipv4_cidr      = "172.16.0.0/28"
+
+      # ArgoCD cluster config
+      control_cluster = false
     }
     central = {
       # GKE cluster config
@@ -19,6 +22,9 @@ locals {
       pods_network_name     = "demo-central-pods"
       services_network_name = "demo-central-services"
       master_ipv4_cidr      = "172.16.1.0/28"
+
+      # ArgoCD cluster config
+      control_cluster = true
     }
     west = {
       # GKE cluster config
@@ -29,6 +35,9 @@ locals {
       pods_network_name     = "demo-west-pods"
       services_network_name = "demo-west-services"
       master_ipv4_cidr      = "172.16.2.0/28"
+
+      # ArgoCD cluster config
+      control_cluster = false
     }
   }
 }
@@ -134,6 +143,36 @@ resource "google_gke_hub_feature" "mci" {
   ]
 }
 
+module "argocd" {
+  source                     = "./modules/argocd"
+  cluster_name               = module.gke_clusters["central"].cluster_name
+  cluster_endpoint           = module.gke_clusters["central"].cluster_endpoint
+  cluster_ca_cert            = module.gke_clusters["central"].master_auth.cluster_ca_certificate
+  control_cluster            = local.clusters.central.control_cluster
+  project_id                 = var.project_id
+  admin_password_secret_name = var.argocd_secret_name
+  gitops_repo_branch         = var.environment
+
+  # Register the other clusters with ArgoCD
+  remote_clusters = [
+    {
+      name           = module.gke_clusters["east"].cluster_name
+      endpoint       = "https://${module.gke_clusters["east"].cluster_endpoint}"
+      token          = data.google_client_config.default.access_token
+      ca_certificate = module.gke_clusters["east"].master_auth.cluster_ca_certificate
+    },
+    {
+      name           = module.gke_clusters["west"].cluster_name
+      endpoint       = "https://${module.gke_clusters["west"].cluster_endpoint}"
+      token          = data.google_client_config.default.access_token
+      ca_certificate = module.gke_clusters["west"].master_auth.cluster_ca_certificate
+    }
+  ]
+
+  providers = {
+    kubernetes = kubernetes.central
+  }
+}
 
 # Cleanup dynamically created firewall rules for GKE clusters
 resource "terraform_data" "gke_fw_cleanup" {

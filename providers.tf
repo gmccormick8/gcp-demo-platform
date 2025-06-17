@@ -43,6 +43,14 @@ provider "kubernetes" {
   cluster_ca_certificate = base64decode(module.gke_clusters["central"].master_auth.cluster_ca_certificate)
 }
 
+provider "helm" {
+  kubernetes {
+    host                   = "https://${module.gke_clusters["central"].cluster_endpoint}"
+    token                  = data.google_client_config.default.access_token
+    cluster_ca_certificate = base64decode(module.gke_clusters["central"].master_auth.cluster_ca_certificate)
+  }
+}
+
 provider "kubernetes" {
   alias                  = "east"
   host                   = "https://${module.gke_clusters["east"].cluster_endpoint}"

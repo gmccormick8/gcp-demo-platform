@@ -22,12 +22,36 @@ This repository demonstrates a secure infrastructure deployment to Google Cloud 
    chmod +x init.sh
    ```
 
-3. Run the initialization script for each environment:
+3. Run the improved initialization script for each environment:
    ```bash
-   ./init.sh prod    # For production environment
-   ./init.sh staging # For staging environment
-   ./init.sh dev     # For development environment
+   # For production environment with custom ArgoCD password
+   ./init.sh prod SecurePassword123
+
+   # For staging environment with auto-generated password
+   ./init.sh staging
+
+   # For development environment with auto-generated password
+   ./init.sh dev
    ```
+
+   This single script now:
+   - Sets up Workload Identity Federation
+   - Creates a Terraform service account with least privilege
+   - Creates a secure Terraform state bucket with versioning
+   - Creates an ArgoCD admin password in Secret Manager
+   - Outputs all necessary GitHub secrets
+
+4. Configure GitHub environments:
+   - Create environments for `dev`, `staging`, and `prod`
+   - Add the secrets output by the script to each environment:
+     - `PROJECT_ID`
+     - `WORKLOAD_IDENTITY_PROVIDER`
+     - `TERRAFORM_SA_EMAIL`
+     - `TF_STATE_BUCKET`
+     - `ENVIRONMENT` (set to `dev`, `staging`, or `prod` according to the environment)
+     - `APPROVERS` (a comma-separated list of GitHub usernames who should be notified for manual approval)
+     - `ARGOCD_SECRET_NAME`
+     - `ARGOCD_ADMIN_PASSWORD` (consider storing this in a password manager instead)
 
 4. Configure GitHub Environments:
    - Go to your repository settings
@@ -61,6 +85,8 @@ This repository demonstrates a secure infrastructure deployment to Google Cloud 
 - State bucket versioning enabled
 - Branch protection rules recommended
 - Separate environments with isolated state storage
+- Environment-specific GitOps branches for configuration management
+- Intelligent approval process for infrastructure changes (see [Workflow Approvals](docs/workflow-approvals.md))
 
 ## Contributing
 

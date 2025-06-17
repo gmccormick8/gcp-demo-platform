@@ -1,15 +1,27 @@
 #!/bin/bash
 # This script sets up the GCP environment for GitHub Actions integration using Workload Identity Federation.
+# It configures the complete bootstrap environment including:
+#   - API enablement
+#   - Workload Identity Federation
+#   - Least privilege IAM roles
+#   - Terraform state storage
+#   - ArgoCD admin password in Secret Manager
+# 
 # Requirements:
 #   - GCloud CLI installed and initialized
 #   - Valid GCP project with billing enabled
 #   - Project Owner or Editor permissions
-# Usage: bash init.sh or ./init.sh
+#
+# Usage: ./init.sh <branch> [argocd-password]
+#   - branch: dev, staging, or prod
+#   - argocd-password: Optional custom password for ArgoCD (default: auto-generated)
 
-# Exit immediately if a command exits with a non-zero status. 
+# Exit immediately if a command exits with a non-zero status.
 set -e
 
-echo "Setting up the environment..."
+echo "==============================================================="
+echo "    Setting up GCP environment for CI/CD with ArgoCD           "
+echo "==============================================================="
 
 # Check and set PROJECT_ID
 if [ -n "$DEVSHELL_PROJECT_ID" ]; then
@@ -35,16 +47,23 @@ if [[ ! "$BRANCH" =~ ^(dev|staging|prod)$ ]]; then
   exit 1
 fi
 
+# Generate a secure ArgoCD password if not provided
+ARGOCD_PASSWORD="${2:-$(openssl rand -base64 16)}"
+
 # Main script logic
+echo "Step 1/5: Enabling required APIs..."
 api_array=(
-  "compute.googleapis.com"
-  "iam.googleapis.com"
-  "iamcredentials.googleapis.com"
-  "cloudresourcemanager.googleapis.com"
-  "storage.googleapis.com"
-  "container.googleapis.com"
-  "gkehub.googleapis.com"
-  "anthos.googleapis.com"
+  "compute.googleapis.com"       # For VM and network resources
+  "iam.googleapis.com"           # For identity and access management
+  "iamcredentials.googleapis.com" # For token generation
+  "cloudresourcemanager.googleapis.com" # For project metadata and policy
+  "storage.googleapis.com"       # For GCS bucket
+  "container.googleapis.com"     # For GKE
+  "gkehub.googleapis.com"        # For GKE Hub fleet features
+  "anthos.googleapis.com"        # For multi-cluster management
+  "connectgateway.googleapis.com" # For connecting to clusters
+  "secretmanager.googleapis.com" # For storing the ArgoCD password
+  "serviceusage.googleapis.com"  # For managing service usage
 )
 
 for api in "${api_array[@]}"; do
@@ -62,14 +81,16 @@ REPO="gmccormick8/gcp-demo-platform"
 PROJECT_NUMBER=$(gcloud projects describe "${PROJECT_ID}" --format="value(projectNumber)")
 
 # Create Workload Identity Pool
+echo "Step 2/5: Setting up Workload Identity Federation..."
 echo "Creating Workload Identity Pool..."
 gcloud iam workload-identity-pools create "${POOL_NAME}" \
   --project="${PROJECT_ID}" \
   --location="global" \
-  --display-name="GitHub Actions Pool - ${BRANCH}"
+  --display-name="GitHub Actions Pool - ${BRANCH}" \
+  --description="Workload Identity Pool for GitHub Actions - ${BRANCH} environment"
 
 # Wait for the pool to be created
-sleep 15
+sleep 10
 
 # Get the Workload Identity Pool ID
 POOL_ID=$(gcloud iam workload-identity-pools describe "${POOL_NAME}" \
@@ -77,66 +98,169 @@ POOL_ID=$(gcloud iam workload-identity-pools describe "${POOL_NAME}" \
   --location="global" \
   --format="value(name)")
 
-# Create Workload Identity Provider
+# Create Workload Identity Provider with enhanced security
 echo "Creating Workload Identity Provider..."
 gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_NAME}" \
   --project="${PROJECT_ID}" \
   --location="global" \
   --workload-identity-pool="${POOL_NAME}" \
   --display-name="GitHub Provider - ${BRANCH}" \
-  --attribute-mapping="google.subject=assertion.sub" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.environment=assertion.environment,attribute.actor=assertion.actor,attribute.ref=assertion.ref" \
   --issuer-uri="https://token.actions.githubusercontent.com" \
-  --attribute-condition="assertion.sub=='repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}'"
+  --attribute-condition="assertion.sub=='repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}' && assertion.ref=='refs/heads/${BRANCH}' && assertion.repository=='${REPO}'" \
+  --allowed-audiences="https://github.com/gmccormick8"
 
-# Grant necessary roles
-echo "Granting minimal required roles..."
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="principal://iam.googleapis.com/${POOL_ID}/subject/repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}" \
+# Define the Workload Identity principal
+WI_PRINCIPAL="principal://iam.googleapis.com/${POOL_ID}/subject/repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}"
+
+# Grant necessary roles using least privilege principle
+echo "Step 3/5: Applying least privilege IAM policies..."
+
+# Create a custom service account for Terraform operations
+SA_NAME="terraform-${BRANCH}-sa"
+SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+
+echo "Creating Terraform service account..."
+gcloud iam service-accounts create "$SA_NAME" \
+  --project="${PROJECT_ID}" \
+  --description="Service account for Terraform operations in the ${BRANCH} environment" \
+  --display-name="Terraform ${BRANCH} SA"
+
+# Allow the Workload Identity principal to impersonate the service account
+gcloud iam service-accounts add-iam-policy-binding "${SA_EMAIL}" \
+  --project="${PROJECT_ID}" \
+  --member="${WI_PRINCIPAL}" \
   --role="roles/iam.workloadIdentityUser"
 
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="principal://iam.googleapis.com/${POOL_ID}/subject/repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}" \
-  --role="roles/monitoring.metricWriter"
+# Grant the service account the necessary roles for Terraform operations
+ROLES=(
+  # Basic service usage and viewing
+  "roles/viewer"                     # Base viewer role
+  "roles/serviceusage.serviceUsageConsumer"  # Allow using enabled services
+  
+  # Storage for Terraform state
+  "roles/storage.admin"              # Manage Terraform state buckets
+  
+  # Compute and networking
+  "roles/compute.networkAdmin"       # Manage VPC networks and subnets
+  "roles/compute.securityAdmin"      # Manage firewall rules
+  
+  # IAM management
+  "roles/iam.serviceAccountAdmin"    # Manage service accounts
+  "roles/iam.serviceAccountUser"     # Use service accounts
+  "roles/resourcemanager.projectIamAdmin"  # Manage IAM permissions
+  
+  # GKE management
+  "roles/container.admin"            # Manage GKE clusters
+  "roles/container.clusterAdmin"     # Admin GKE clusters
+  
+  # Multi-cluster management
+  "roles/gkehub.admin"               # Manage GKE Hub
+  
+  # Secret management
+  "roles/secretmanager.admin"        # For managing secrets
+)
 
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="principal://iam.googleapis.com/${POOL_ID}/subject/repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}" \
-  --role="roles/logging.logWriter"
+# Apply the roles to the service account
+for role in "${ROLES[@]}"; do
+  echo "Granting $role to $SA_EMAIL..."
+  gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+    --member="serviceAccount:${SA_EMAIL}" \
+    --role="$role" \
+    --condition=None
+done
 
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="principal://iam.googleapis.com/${POOL_ID}/subject/repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}" \
-  --role="roles/storage.admin"
-
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="principal://iam.googleapis.com/${POOL_ID}/subject/repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}" \
-  --role="roles/compute.networkAdmin"
-
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="principal://iam.googleapis.com/${POOL_ID}/subject/repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}" \
-  --role="roles/compute.securityAdmin"
-
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="principal://iam.googleapis.com/${POOL_ID}/subject/repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}" \
-  --role="roles/iam.serviceAccountAdmin"
-
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="principal://iam.googleapis.com/${POOL_ID}/subject/repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}" \
-  --role="roles/container.admin"
-
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="principal://iam.googleapis.com/${POOL_ID}/subject/repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}" \
-  --role="roles/gkehub.admin"
-
-# Create Terraform state bucket
+# Create Terraform state bucket with enhanced security
 BUCKET_NAME="${BRANCH}-tf-state-${PROJECT_ID}"
-echo "Creating Terraform state bucket..."
+echo "Step 4/5: Creating secure Terraform state bucket..."
 gcloud storage buckets create gs://${BUCKET_NAME} \
   --project=${PROJECT_ID} \
+  --location=us \
   --public-access-prevention \
   --uniform-bucket-level-access
 
-sleep 10
+sleep 5
 
+echo "Enabling versioning and lifecycle rules for Terraform state..."
 gcloud storage buckets update gs://${BUCKET_NAME} --versioning
+
+# Add lifecycle policy to manage old versions and avoid excessive storage costs
+cat > /tmp/lifecycle-config.json << EOL
+{
+  "lifecycle": {
+    "rule": [
+      {
+        "action": {
+          "type": "Delete"
+        },
+        "condition": {
+          "numNewerVersions": 5,
+          "isLive": false
+        }
+      }
+    ]
+  }
+}
+EOL
+
+gcloud storage buckets update gs://${BUCKET_NAME} --lifecycle-file=/tmp/lifecycle-config.json
+rm /tmp/lifecycle-config.json
+
+# Set up ArgoCD admin password in Secret Manager
+echo "Step 5/5: Setting up ArgoCD admin password in Secret Manager..."
+
+# Check if htpasswd is available, if not try to install it
+if ! command -v htpasswd &> /dev/null; then
+  echo "htpasswd not found, attempting to install apache2-utils..."
+  if command -v apt-get &> /dev/null; then
+    sudo apt-get update && sudo apt-get install -y apache2-utils
+  elif command -v yum &> /dev/null; then
+    sudo yum install -y httpd-tools
+  elif command -v brew &> /dev/null; then
+    brew install httpd
+  else
+    echo "Warning: Could not install htpasswd utility. Using bcrypt via Python instead."
+    # Try using Python if available
+    if command -v python3 &> /dev/null; then
+      pip3 install --user bcrypt
+      PASSWORD_HASH=$(python3 -c "import bcrypt; import sys; print(bcrypt.hashpw('$ARGOCD_PASSWORD'.encode(), bcrypt.gensalt(rounds=10)).decode().replace('\$2b\$', '\$2a\$'))")
+    else
+      echo "Could not generate bcrypt hash. Using default ArgoCD password."
+      PASSWORD_HASH='$2a$10$dryiLlwrSLZgcH4tzft2OO6pMrPsv6mcl1VHJCMTbJ6W1dpjVrFJC'  # Default: 'argocd123'
+    fi
+  fi
+fi
+
+# Generate password hash with htpasswd if it's available
+if command -v htpasswd &> /dev/null && [ -z "$PASSWORD_HASH" ]; then
+  echo "Generating bcrypt hash for ArgoCD password..."
+  PASSWORD_HASH=$(htpasswd -bnBC 10 "" "$ARGOCD_PASSWORD" | tr -d ':\n' | sed 's/$2y/$2a/')
+fi
+
+# Create the secret in Secret Manager
+echo "Creating Secret Manager secret 'argocd-admin-password'..."
+SECRET_NAME="argocd-admin-password-${BRANCH}"
+
+# Check if the secret already exists, if not create it
+if ! gcloud secrets describe "$SECRET_NAME" --project="$PROJECT_ID" &>/dev/null; then
+  gcloud secrets create "$SECRET_NAME" \
+    --project="$PROJECT_ID" \
+    --replication-policy="automatic" \
+    --labels="env=${BRANCH},app=argocd,managed-by=init-script"
+else
+  echo "Secret '$SECRET_NAME' already exists."
+fi
+
+# Add the password hash to the secret
+echo "Adding password hash to secret..."
+echo -n "$PASSWORD_HASH" | gcloud secrets versions add "$SECRET_NAME" --data-file=- --project="$PROJECT_ID"
+
+# Grant access to the Terraform service account
+echo "Granting access to Terraform service account..."
+gcloud secrets add-iam-policy-binding "$SECRET_NAME" \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/secretmanager.secretAccessor" \
+  --project="$PROJECT_ID"
 
 # Output important information
 echo ""
@@ -152,7 +276,21 @@ echo ""
 echo " Name: WORKLOAD_IDENTITY_PROVIDER"
 echo " Value: ${POOL_ID}/providers/${PROVIDER_NAME}"
 echo ""
+echo " Name: TERRAFORM_SA_EMAIL"
+echo " Value: ${SA_EMAIL}"
+echo ""
 echo " Name: TF_STATE_BUCKET"
 echo " Value: ${BUCKET_NAME}"
+echo ""
+echo " Name: ARGOCD_SECRET_NAME"
+echo " Value: ${SECRET_NAME}"
+echo ""
+echo " Name: ARGOCD_ADMIN_PASSWORD"
+echo " Value: ${ARGOCD_PASSWORD}"
+echo ""
+echo "================================================================"
+echo ""
+echo " Store these values securely - especially the ArgoCD password!"
+echo " Update your terraform configuration to use these values."
 echo ""
 echo "================================================================"

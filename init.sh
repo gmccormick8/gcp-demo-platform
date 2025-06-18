@@ -131,6 +131,17 @@ gcloud iam service-accounts add-iam-policy-binding "${SA_EMAIL}" \
   --member="${WI_PRINCIPAL}" \
   --role="roles/iam.workloadIdentityUser"
 
+# Grant additional roles directly to the Workload Identity principal for token management
+echo "Granting token creator and service account user roles to Workload Identity principal..."
+gcloud iam service-accounts add-iam-policy-binding "${SA_EMAIL}" \
+  --project="${PROJECT_ID}" \
+  --member="${WI_PRINCIPAL}" \
+  --role="roles/iam.serviceAccountTokenCreator"
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="${WI_PRINCIPAL}" \
+  --role="roles/iam.serviceAccountUser"
+
 # Grant the service account the necessary roles for Terraform operations
 ROLES=(
   # Basic service usage and viewing

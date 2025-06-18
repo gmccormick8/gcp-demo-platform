@@ -30,19 +30,20 @@ jobs:
         id: gcp-auth
         uses: google-github-actions/auth@v2
         with:
+          project_id: ${{ secrets.PROJECT_ID }}
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.TERRAFORM_SA_EMAIL }}
-
-      - name: Configure gcloud CLI
-        run: |
-          gcloud config set project ${{ secrets.PROJECT_ID }}
-          gcloud auth list      
+          token_format: 'access_token'
       
+      - name: Debug oidc
+        uses: github/actions-oidc-debugger@main
+        with:
+          audience: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '1.12.x'
-          terraform_wrapper: false
+          terraform_version: '1.12.0'
 
       - name: Terraform Format
         env:
@@ -158,8 +159,7 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '1.12.x'
-          terraform_wrapper: false
+          terraform_version: '1.12.0'
 
       - name: Terraform Init
         env:

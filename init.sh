@@ -158,6 +158,9 @@ ROLES=(
   
   # Secret management
   "roles/secretmanager.admin"        # For managing secrets
+
+  # Allow creating tokens for service accounts
+  "roles/iam.serviceAccountTokenCreator"  # Allow creating tokens for service accounts
 )
 
 # Apply the roles to the service account
@@ -165,8 +168,7 @@ for role in "${ROLES[@]}"; do
   echo "Granting $role to $SA_EMAIL..."
   gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
     --member="serviceAccount:${SA_EMAIL}" \
-    --role="$role" \
-    --condition=None
+    --role="$role" 
 done
 
 # Create Terraform state bucket with enhanced security
@@ -183,7 +185,7 @@ sleep 5
 echo "Enabling versioning and lifecycle rules for Terraform state..."
 gcloud storage buckets update gs://${BUCKET_NAME} --versioning
 
-# Add lifecycle policy to manage old versions and avoid excessive storage costs
+# Add lifecycle policy
 cat > /tmp/lifecycle-config.json << EOL
 {
   "lifecycle": {

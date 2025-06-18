@@ -33,14 +33,6 @@ jobs:
           project_id: ${{ secrets.PROJECT_ID }}
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.TERRAFORM_SA_EMAIL }}
-          token_format: 'access_token'
-          create_credentials_file: true
-          audience: "https://iam.googleapis.com/${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}"
-          
-      - name: Debug oidc
-        uses: github/actions-oidc-debugger@main
-        with:
-          audience: "https://iam.googleapis.com/${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}"
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3

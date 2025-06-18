@@ -105,12 +105,12 @@ gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_NAME}" \
   --location="global" \
   --workload-identity-pool="${POOL_NAME}" \
   --display-name="GitHub Provider - ${BRANCH}" \
-  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.branch=assertion.ref" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.repository_id=assertion.repository_id,attribute.workflow_ref=assertion.workflow_ref,attribute.environment=assertion.environment,attribute.actor_id=assertion.actor_id" \
   --issuer-uri="https://token.actions.githubusercontent.com" \
-  --attribute-condition="attribute.repository=='${REPO}' && (attribute.branch.startsWith('refs/heads/${BRANCH}') || attribute.branch.endsWith('${BRANCH}'))" \
+  --attribute-condition="assertion.repository_id=='999072242' && assertion.workflow_ref=='gmccormick8/gcp-demo-platform/.github/workflows/deploy.yml@refs/heads/${BRANCH}' && assertion.environment=='${BRANCH}' && assertion.actor_id=='74574750'" \
 
 # Define the Workload Identity principal for the specific repo and branch
-WI_PRINCIPAL="principal://iam.googleapis.com/${POOL_ID}/subject/repo:${REPO}:ref:refs/heads/${BRANCH}"
+WI_PRINCIPAL="principalSet://iam.googleapis.com/${POOL_ID}/attribute.repository_id/999072242/attribute.workflow_ref/gmccormick8\/gcp-demo-platform\/.github\/workflows\/deploy.yml@refs\/heads\/${BRANCH}/attribute.environment/${BRANCH}/attribute.actor_id/74574750"
 
 # Grant necessary roles using least privilege principle
 echo "Step 3/5: Applying least privilege IAM policies..."
@@ -219,15 +219,15 @@ if ! command -v htpasswd &> /dev/null; then
     sudo yum install -y httpd-tools
   elif command -v brew &> /dev/null; then
     brew install httpd
-  else
-    echo "Warning: Could not install htpasswd utility. Using bcrypt via Python instead."
+  else    echo "Warning: Could not install htpasswd utility. Using bcrypt via Python instead."
     # Try using Python if available
     if command -v python3 &> /dev/null; then
       pip3 install --user bcrypt
       PASSWORD_HASH=$(python3 -c "import bcrypt; import sys; print(bcrypt.hashpw('$ARGOCD_PASSWORD'.encode(), bcrypt.gensalt(rounds=10)).decode().replace('\$2b\$', '\$2a\$'))")
     else
-      echo "Could not generate bcrypt hash. Using default ArgoCD password."
-      PASSWORD_HASH='$2a$10$dryiLlwrSLZgcH4tzft2OO6pMrPsv6mcl1VHJCMTbJ6W1dpjVrFJC'  # Default: 'argocd123'
+      echo "Error: Could not generate bcrypt hash. No password generation tools available."
+      echo "Please install either apache2-utils, httpd-tools, or Python with bcrypt."
+      exit 1
     fi
   fi
 fi

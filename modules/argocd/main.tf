@@ -31,15 +31,24 @@ resource "helm_release" "argocd" {
     name  = "redis.enabled"
     value = true
   }
-
   set {
     name  = "redis-ha.enabled"
     value = var.control_cluster
   }
+
   # Set admin password from Secret Manager or provided hash
+  dynamic "set" {
+    for_each = local.admin_password_hash != null ? [1] : []
+    content {
+      name  = "configs.secret.argocdServerAdminPassword"
+      value = local.admin_password_hash
+    }
+  }
+
+  # Prevent insecure default passwords
   set {
-    name  = "configs.secret.argocdServerAdminPassword"
-    value = local.admin_password_hash
+    name  = "configs.secret.createSecret"
+    value = local.admin_password_hash == null ? false : true
   }
 
   # Configure SSO integration if enabled

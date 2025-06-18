@@ -5,10 +5,14 @@ variable "control_cluster" {
 }
 
 variable "admin_password_hash" {
-  description = "Bcrypt hash of the ArgoCD admin password (default is 'argocd123')"
+  description = "Bcrypt hash of the ArgoCD admin password (must be provided if secret_name is not used)"
   type        = string
   default     = ""
   sensitive   = true
+  validation {
+    condition     = var.admin_password_hash != "" || var.admin_password_secret_name != ""
+    error_message = "Either admin_password_hash or admin_password_secret_name must be provided."
+  }
 }
 
 variable "admin_password_secret_name" {

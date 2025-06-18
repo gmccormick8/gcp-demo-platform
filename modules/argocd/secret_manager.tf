@@ -12,11 +12,12 @@ data "google_secret_manager_secret_version" "argocd_admin_password" {
 }
 
 locals {
-  # Check if secret exists and has a version, otherwise use the provided hash or the default
+  # Check if secret exists and has a version
   secret_exists = var.admin_password_secret_name != "" && length(data.google_secret_manager_secret_version.argocd_admin_password) > 0
 
-  # Use the secret if it exists, otherwise use the provided hash or the default
+  # Use the secret if it exists, otherwise use the provided hash
+  # No default password should be used - this now requires the secret to be set in Secret Manager
   admin_password_hash = local.secret_exists ? data.google_secret_manager_secret_version.argocd_admin_password[0].secret_data : (
-    var.admin_password_hash != "" ? var.admin_password_hash : "$2a$10$dryiLlwrSLZgcH4tzft2OO6pMrPsv6mcl1VHJCMTbJ6W1dpjVrFJC" # Default: 'argocd123'
+    var.admin_password_hash != "" ? var.admin_password_hash : null
   )
 }

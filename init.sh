@@ -105,12 +105,12 @@ gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_NAME}" \
   --location="global" \
   --workload-identity-pool="${POOL_NAME}" \
   --display-name="GitHub Provider - ${BRANCH}" \
-  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.ref=assertion.ref" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.branch=assertion.ref" \
   --issuer-uri="https://token.actions.githubusercontent.com" \
-  --attribute-condition="assertion.sub=='repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}' && assertion.ref=='refs/heads/${BRANCH}' && assertion.repository=='${REPO}'" \
+  --attribute-condition="attribute.repository=='${REPO}' && (attribute.branch.startsWith('refs/heads/${BRANCH}') || attribute.branch.endsWith('${BRANCH}'))" \
 
-# Define the Workload Identity principal
-WI_PRINCIPAL="principal://iam.googleapis.com/${POOL_ID}/subject/repo:gmccormick8/gcp-demo-platform:ref:refs/heads/${BRANCH}"
+# Define the Workload Identity principal for the specific repo and branch
+WI_PRINCIPAL="principal://iam.googleapis.com/${POOL_ID}/subject/repo:${REPO}:ref:refs/heads/${BRANCH}"
 
 # Grant necessary roles using least privilege principle
 echo "Step 3/5: Applying least privilege IAM policies..."

@@ -23,7 +23,6 @@ output "argocd_info" {
     namespace           = module.argocd.argocd_namespace
     service_name        = module.argocd.argocd_server_service
     control_cluster     = local.clusters.central.control_cluster
-    access_instructions = module.argocd.access_instructions
     admin_username      = "admin"
   }
 }

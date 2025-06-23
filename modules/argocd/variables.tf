@@ -66,8 +66,7 @@ variable "remote_clusters" {
     ca_certificate = string
     provider_alias = string
   }))
-  default   = []
-  sensitive = true
+  default = []
 }
 
 variable "cluster_name" {
@@ -83,5 +82,4 @@ variable "cluster_endpoint" {
 variable "cluster_ca_cert" {
   description = "CA certificate of the Kubernetes cluster"
   type        = string
-  sensitive   = true
 }

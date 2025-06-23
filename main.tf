@@ -48,6 +48,21 @@ module "demo-vpc" {
   project_id   = var.project_id
   network_name = "demo"
 
+  # Add firewall rule for ArgoCD
+  firewall_rules = {
+    "allow-argocd-external" = {
+      direction     = "INGRESS"
+      priority      = 1000
+      source_ranges = ["0.0.0.0/0"]
+      allow = [
+        {
+          protocol = "tcp"
+          ports    = ["80", "443", "8080"]
+        }
+      ]
+    }
+  }
+
   subnets = {
     "demo-east-vpc" = {
       region = "us-east5"

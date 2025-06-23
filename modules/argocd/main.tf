@@ -5,7 +5,6 @@ resource "helm_release" "argocd" {
   namespace        = "argocd"
   create_namespace = true
   version          = "5.51.4"
-
   # Increase timeouts for GitHub Actions
   timeout       = 600 # 10 minutes
   wait          = true
@@ -13,7 +12,13 @@ resource "helm_release" "argocd" {
 
   set {
     name  = "server.service.type"
-    value = "ClusterIP"
+    value = "LoadBalancer"
+  }
+
+  # Add annotations for GCP load balancer
+  set {
+    name  = "server.service.annotations.cloud\\.google\\.com/load-balancer-type"
+    value = "External"
   }
 
   set {
@@ -95,9 +100,12 @@ resource "helm_release" "argocd" {
   values = [<<-EOT
     server:
       extraArgs:
-        - --insecure # Allow accessing without HTTPS when using port-forwarding
+        - --insecure # Allow accessing without HTTPS via LoadBalancer
       config:
-        url: ""
+        url: "${var.argocd_url}"
+      service:
+        annotations:
+          cloud.google.com/neg: '{"ingress": true}'
       additionalApplications:
       - name: cluster-resources
         namespace: argocd

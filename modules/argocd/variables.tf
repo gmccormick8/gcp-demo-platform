@@ -40,7 +40,7 @@ variable "dex_config" {
 }
 
 variable "argocd_url" {
-  description = "External URL for ArgoCD - leave empty to use kubectl port-forwarding"
+  description = "External URL for ArgoCD (optional)"
   type        = string
   default     = ""
 }

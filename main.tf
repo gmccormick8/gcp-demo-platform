@@ -148,12 +148,12 @@ module "argocd" {
   cluster_name               = module.gke_clusters["central"].cluster_name
   cluster_endpoint           = module.gke_clusters["central"].cluster_endpoint
   cluster_ca_cert            = module.gke_clusters["central"].master_auth.cluster_ca_certificate
-  control_cluster            = local.clusters.central.control_cluster
   project_id                 = var.project_id
   admin_password_secret_name = var.argocd_secret_name
+  control_cluster            = local.clusters.central.control_cluster
   gitops_repo_branch         = var.environment
-
-  # Register the other clusters with ArgoCD
+  
+  # Register remote clusters with ArgoCD
   remote_clusters = [
     {
       name           = module.gke_clusters["east"].cluster_name
@@ -168,10 +168,18 @@ module "argocd" {
       ca_certificate = module.gke_clusters["west"].master_auth.cluster_ca_certificate
     }
   ]
-
+  
   providers = {
     kubernetes = kubernetes.central
+    helm       = helm
+    google     = google
   }
+
+  depends_on = [
+    google_gke_hub_feature.mcs,
+    google_gke_hub_feature.mci,
+    module.gke_clusters
+  ]
 }
 
 # Cleanup dynamically created firewall rules for GKE clusters

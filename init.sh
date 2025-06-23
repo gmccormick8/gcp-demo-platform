@@ -53,17 +53,18 @@ ARGOCD_PASSWORD="${2:-$(openssl rand -base64 16)}"
 # Main script logic
 echo "Step 1/5: Enabling required APIs..."
 api_array=(
-  "compute.googleapis.com"       # For VM and network resources
-  "iam.googleapis.com"           # For identity and access management
-  "iamcredentials.googleapis.com" # For token generation
-  "cloudresourcemanager.googleapis.com" # For project metadata and policy
-  "storage.googleapis.com"       # For GCS bucket
-  "container.googleapis.com"     # For GKE
-  "gkehub.googleapis.com"        # For GKE Hub fleet features
-  "anthos.googleapis.com"        # For multi-cluster management
-  "connectgateway.googleapis.com" # For connecting to clusters
-  "secretmanager.googleapis.com" # For storing the ArgoCD password
-  "serviceusage.googleapis.com"  # For managing service usage
+  "compute.googleapis.com"
+  "iam.googleapis.com"
+  "iamcredentials.googleapis.com"
+  "cloudresourcemanager.googleapis.com"
+  "storage.googleapis.com"
+  "container.googleapis.com"
+  "gkehub.googleapis.com"
+  "anthos.googleapis.com"
+  "secretmanager.googleapis.com"
+  "serviceusage.googleapis.com"
+  "multiclusteringress.googleapis.com"
+  "multiclusterservicediscovery.googleapis.com"
 )
 
 for api in "${api_array[@]}"; do
@@ -105,18 +106,18 @@ gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_NAME}" \
   --location="global" \
   --workload-identity-pool="${POOL_NAME}" \
   --display-name="GitHub Provider - ${BRANCH}" \
-  --attribute-mapping="google.subject=assertion.sub,attribute.repository_id=assertion.repository_id,attribute.workflow_ref=assertion.workflow_ref,attribute.environment=assertion.environment,attribute.actor_id=assertion.actor_id" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.repository_id=assertion.repository_id,attribute.workflow_ref=assertion.workflow_ref,attribute.actor_id=assertion.actor_id" \
   --issuer-uri="https://token.actions.githubusercontent.com" \
-  --attribute-condition="assertion.repository_id=='999072242' && assertion.workflow_ref=='gmccormick8/gcp-demo-platform/.github/workflows/deploy.yml@refs/heads/${BRANCH}' && assertion.environment=='${BRANCH}' && assertion.actor_id=='74574750'" \
+  --attribute-condition="assertion.repository_id == '999072242' && assertion.workflow_ref == 'gmccormick8/gcp-demo-platform/.github/workflows/deploy.yml@refs/heads/${BRANCH}' && assertion.actor_id == '74574750'" \
 
 # Define the Workload Identity principal for the specific repo and branch
-WI_PRINCIPAL="principalSet://iam.googleapis.com/${POOL_ID}/attribute.repository_id/999072242/attribute.workflow_ref/gmccormick8\/gcp-demo-platform\/.github\/workflows\/deploy.yml@refs\/heads\/${BRANCH}/attribute.environment/${BRANCH}/attribute.actor_id/74574750"
+WI_PRINCIPAL="principalSet://iam.googleapis.com/${POOL_ID}/attribute.repository_id/999072242"
 
 # Grant necessary roles using least privilege principle
 echo "Step 3/5: Applying least privilege IAM policies..."
 
 # Create a custom service account for Terraform operations
-SA_NAME="terraform-${BRANCH}-sa"
+SA_NAME="tf-${BRANCH}-sa"
 SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 
 echo "Creating Terraform service account..."
@@ -131,16 +132,11 @@ gcloud iam service-accounts add-iam-policy-binding "${SA_EMAIL}" \
   --member="${WI_PRINCIPAL}" \
   --role="roles/iam.workloadIdentityUser"
 
-# Grant additional roles directly to the Workload Identity principal for token management
-echo "Granting token creator and service account user roles to Workload Identity principal..."
+# Allow the Workload Identity principal to create tokens for the service account
 gcloud iam service-accounts add-iam-policy-binding "${SA_EMAIL}" \
   --project="${PROJECT_ID}" \
   --member="${WI_PRINCIPAL}" \
   --role="roles/iam.serviceAccountTokenCreator"
-
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="${WI_PRINCIPAL}" \
-  --role="roles/iam.serviceAccountUser"
 
 # Grant the service account the necessary roles for Terraform operations
 ROLES=(
@@ -169,9 +165,6 @@ ROLES=(
   
   # Secret management
   "roles/secretmanager.admin"        # For managing secrets
-
-  # Allow creating tokens for service accounts
-  "roles/iam.serviceAccountTokenCreator"  # Allow creating tokens for service accounts
 )
 
 # Apply the roles to the service account

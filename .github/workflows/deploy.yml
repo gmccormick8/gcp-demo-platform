@@ -33,7 +33,9 @@ jobs:
           project_id: ${{ secrets.PROJECT_ID }}
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.TERRAFORM_SA_EMAIL }}
-
+          token_format: "access_token"
+          create_credentials_file: true
+          
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -49,7 +51,6 @@ jobs:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
           TF_VAR_argocd_secret_name: ${{ secrets.ARGOCD_SECRET_NAME }}
           TF_VAR_environment: ${{ github.ref_name }}
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.gcp-auth.outputs.credentials_file_path }}
         run: |
           terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
 
@@ -62,7 +63,7 @@ jobs:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
           TF_VAR_argocd_secret_name: ${{ secrets.ARGOCD_SECRET_NAME }}
           TF_VAR_environment: ${{ github.ref_name }}
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.gcp-auth.outputs.credentials_file_path }}
+          GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.gcp-auth.outputs.access_token }}
         run: |
           terraform plan -detailed-exitcode -out=terraform-plan.tfplan -input=false \
             -var="project_id=${{ secrets.PROJECT_ID }}" \
@@ -148,14 +149,14 @@ jobs:
           fetch-depth: 0
           
       - name: Authenticate to GCP
+        id: gcp-auth-apply
         uses: google-github-actions/auth@v2
         with:
           project_id: ${{ secrets.PROJECT_ID }}
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.TERRAFORM_SA_EMAIL }}
-          token_format: 'access_token'
+          token_format: "access_token"
           create_credentials_file: true
-          audience: "https://iam.googleapis.com/${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}"
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
@@ -185,4 +186,5 @@ jobs:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
           TF_VAR_argocd_secret_name: ${{ secrets.ARGOCD_SECRET_NAME }}
           TF_VAR_environment: ${{ github.ref_name }}
+          GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.gcp-auth-apply.outputs.access_token }}
         run: terraform apply -auto-approve terraform-plan.tfplan

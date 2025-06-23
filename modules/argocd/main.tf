@@ -87,7 +87,6 @@ resource "helm_release" "argocd" {
     name  = "notifications.enabled"
     value = true
   }
-
   values = [<<-EOT
     server:
       extraArgs:
@@ -100,7 +99,8 @@ resource "helm_release" "argocd" {
         destination:
           server: https://kubernetes.default.svc
           namespace: argocd
-        project: default        source:
+        project: default
+        source:
           repoURL: "${var.gitops_repo_url}"
           targetRevision: ${var.gitops_repo_branch}
           path: cluster-resources

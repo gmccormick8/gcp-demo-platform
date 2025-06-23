@@ -6,6 +6,11 @@ resource "helm_release" "argocd" {
   create_namespace = true
   version          = "5.51.4"
 
+  # Increase timeouts for GitHub Actions
+  timeout       = 600 # 10 minutes
+  wait          = true
+  wait_for_jobs = true
+
   set {
     name  = "server.service.type"
     value = "ClusterIP"

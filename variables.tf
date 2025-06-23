@@ -14,3 +14,17 @@ variable "environment" {
   type        = string
   default     = "dev"
 }
+
+variable "master_authorized_networks" {
+  description = "List of CIDR blocks that are allowed to access the master's API endpoint"
+  type = list(object({
+    cidr_block   = string
+    display_name = string
+  }))
+  default = [
+    {
+      cidr_block   = "0.0.0.0/0" # Allow all IPs for demonstration - restrict this in production!
+      display_name = "All IPs - For GitHub Actions"
+    }
+  ]
+}

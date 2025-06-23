@@ -20,9 +20,9 @@ output "vpc_details" {
 output "argocd_info" {
   description = "ArgoCD deployment information"
   value = {
-    namespace           = module.argocd.argocd_namespace
-    service_name        = module.argocd.argocd_server_service
-    control_cluster     = local.clusters.central.control_cluster
-    admin_username      = "admin"
+    namespace       = module.argocd.argocd_namespace
+    service_name    = module.argocd.argocd_server_service
+    control_cluster = local.clusters.central.control_cluster
+    admin_username  = "admin"
   }
 }

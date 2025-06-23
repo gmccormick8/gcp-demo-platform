@@ -64,6 +64,7 @@ variable "remote_clusters" {
     endpoint       = string
     token          = string
     ca_certificate = string
+    provider_alias = string
   }))
   default   = []
   sensitive = true

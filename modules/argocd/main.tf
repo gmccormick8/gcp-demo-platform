@@ -139,10 +139,12 @@ resource "kubernetes_cluster_role_binding" "argocd_cluster_admin" {
 
 # Create registrations for remote clusters if this is the control cluster
 resource "kubernetes_secret" "remote_cluster_secrets" {
-  count = var.control_cluster && length(var.remote_clusters) > 0 ? length(var.remote_clusters) : 0
+  for_each = var.control_cluster ? { for idx, cluster in var.remote_clusters : cluster.name => cluster } : {}
+
+  provider = kubernetes
 
   metadata {
-    name      = "cluster-${var.remote_clusters[count.index].name}"
+    name      = "cluster-${each.value.name}"
     namespace = "argocd"
     labels = {
       "argocd.argoproj.io/secret-type" = "cluster"
@@ -150,13 +152,13 @@ resource "kubernetes_secret" "remote_cluster_secrets" {
   }
 
   data = {
-    name   = var.remote_clusters[count.index].name
-    server = var.remote_clusters[count.index].endpoint
+    name   = each.value.name
+    server = each.value.endpoint
     config = jsonencode({
-      bearerToken = var.remote_clusters[count.index].token
+      bearerToken = each.value.token
       tlsClientConfig = {
         insecure = false
-        caData   = var.remote_clusters[count.index].ca_certificate
+        caData   = each.value.ca_certificate
       }
     })
   }

@@ -3,8 +3,9 @@ terraform {
 
   required_providers {
     kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = "~> 2.30"
+      source                = "hashicorp/kubernetes"
+      version               = "~> 2.30"
+      configuration_aliases = [kubernetes.east, kubernetes.west]
     }
     helm = {
       source  = "hashicorp/helm"

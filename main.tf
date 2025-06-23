@@ -152,7 +152,7 @@ module "argocd" {
   admin_password_secret_name = var.argocd_secret_name
   control_cluster            = local.clusters.central.control_cluster
   gitops_repo_branch         = var.environment
-  
+
   # Register remote clusters with ArgoCD
   remote_clusters = [
     {
@@ -160,19 +160,23 @@ module "argocd" {
       endpoint       = "https://${module.gke_clusters["east"].cluster_endpoint}"
       token          = data.google_client_config.default.access_token
       ca_certificate = module.gke_clusters["east"].master_auth.cluster_ca_certificate
+      provider_alias = "east"
     },
     {
       name           = module.gke_clusters["west"].cluster_name
       endpoint       = "https://${module.gke_clusters["west"].cluster_endpoint}"
       token          = data.google_client_config.default.access_token
       ca_certificate = module.gke_clusters["west"].master_auth.cluster_ca_certificate
+      provider_alias = "west"
     }
   ]
-  
+
   providers = {
-    kubernetes = kubernetes.central
-    helm       = helm
-    google     = google
+    kubernetes      = kubernetes.central
+    kubernetes.east = kubernetes.east
+    kubernetes.west = kubernetes.west
+    helm            = helm
+    google          = google
   }
 
   depends_on = [
@@ -211,7 +215,6 @@ resource "terraform_data" "fleet_membership_cleanup" {
   triggers_replace = {
     project_id = var.project_id
   }
-
   provisioner "local-exec" {
     when    = destroy
     command = <<EOT

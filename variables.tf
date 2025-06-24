@@ -4,7 +4,7 @@ variable "project_id" {
 }
 
 variable "argocd_secret_name" {
-  description = "Name of the Secret Manager secret containing the ArgoCD admin password hash"
+  description = "Name of the Secret Manager secret containing the plaintext ArgoCD admin password"
   type        = string
   default     = "argocd-admin-password" # Will be overridden by tfvars or environment variables
 }

@@ -10,7 +10,7 @@ output "argocd_server_service" {
 
 output "argocd_server_admin_password_info" {
   description = "Information about the ArgoCD admin password"
-  value       = var.admin_password_secret_name != "" ? "Stored in Secret Manager: ${var.admin_password_secret_name}" : (var.admin_password_hash != "" ? "Custom password hash provided" : (length(random_password.argocd_admin) > 0 ? "Auto-generated password" : "No password provided - manual configuration required"))
+  value       = var.admin_password_secret_name != "" ? "Plaintext password stored in Secret Manager: ${var.admin_password_secret_name}" : (var.admin_password_hash != "" ? "Custom password hash provided" : (length(random_password.argocd_admin) > 0 ? "Auto-generated password" : "No password provided - manual configuration required"))
 }
 
 output "argocd_admin_password" {

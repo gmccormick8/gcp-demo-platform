@@ -5,7 +5,7 @@ variable "control_cluster" {
 }
 
 variable "admin_password_hash" {
-  description = "Bcrypt hash of the ArgoCD admin password (must be provided if secret_name is not used)"
+  description = "Bcrypt hash of the ArgoCD admin password (legacy - prefer using admin_password_secret_name instead)"
   type        = string
   default     = ""
   sensitive   = true
@@ -16,7 +16,7 @@ variable "admin_password_hash" {
 }
 
 variable "admin_password_secret_name" {
-  description = "Name of the GCP Secret Manager secret containing the bcrypt hash of the ArgoCD admin password"
+  description = "Name of the GCP Secret Manager secret containing the plaintext ArgoCD admin password"
   type        = string
   default     = ""
 }

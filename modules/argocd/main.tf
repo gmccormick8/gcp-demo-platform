@@ -34,7 +34,6 @@ resource "helm_release" "argocd" {
     name  = "repoServer.replicas"
     value = var.control_cluster ? 2 : 1
   }
-
   # Configure Redis HA if this is a control cluster
   set {
     name  = "redis.enabled"
@@ -49,7 +48,7 @@ resource "helm_release" "argocd" {
     for_each = local.use_plaintext_password ? [1] : []
     content {
       name  = "configs.secret.argocdServerAdminPasswordMtime"
-      value = "1" # Force password update on changes
+      value = formatdate("YYYY-MM-DD'T'hh:mm:ssZ", timestamp()) # Use current timestamp as string in RFC3339 format
     }
   }
 

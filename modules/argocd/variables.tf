@@ -4,21 +4,14 @@ variable "control_cluster" {
   default     = false
 }
 
-variable "admin_password_hash" {
-  description = "Bcrypt hash of the ArgoCD admin password (legacy - prefer using admin_password_secret_name instead)"
-  type        = string
-  default     = ""
-  sensitive   = true
-  validation {
-    condition     = var.admin_password_hash != "" || var.admin_password_secret_name != ""
-    error_message = "Either admin_password_hash or admin_password_secret_name must be provided."
-  }
-}
-
 variable "admin_password_secret_name" {
   description = "Name of the GCP Secret Manager secret containing the plaintext ArgoCD admin password"
   type        = string
-  default     = ""
+
+  validation {
+    condition     = var.admin_password_secret_name != ""
+    error_message = "The admin_password_secret_name is required and must be a valid Secret Manager secret name."
+  }
 }
 
 variable "project_id" {

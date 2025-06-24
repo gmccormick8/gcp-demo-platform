@@ -6,7 +6,10 @@ variable "project_id" {
 variable "argocd_secret_name" {
   description = "Name of the Secret Manager secret containing the plaintext ArgoCD admin password"
   type        = string
-  default     = "argocd-admin-password" # Will be overridden by tfvars or environment variables
+  validation {
+    condition     = length(var.argocd_secret_name) > 0
+    error_message = "The argocd_secret_name variable must be set to a valid Secret Manager secret name."
+  }
 }
 
 variable "environment" {

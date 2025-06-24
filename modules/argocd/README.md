@@ -89,7 +89,10 @@ This module is designed to work without a domain name or ingress controller. To 
 
 5. Login with:
    - Username: admin
-   - Password: argocd123 (or your custom password)
+   - Password: Retrieve from Secret Manager with the command:
+     ```bash
+     gcloud secrets versions access latest --secret=argocd-admin-password --project=your-project-id
+     ```
 
 The module provides these instructions as an output value for easy reference.
 
@@ -101,7 +104,7 @@ The module provides these instructions as an output value for easy reference.
 | cluster_name | Name of the Kubernetes cluster | `string` | n/a | yes |
 | cluster_endpoint | Endpoint of the Kubernetes cluster | `string` | n/a | yes |
 | cluster_ca_cert | CA certificate of the Kubernetes cluster | `string` | n/a | yes |
-| admin_password_hash | Bcrypt hash of ArgoCD admin password | `string` | `""` | no |
+| admin_password_secret_name | Name of the GCP Secret Manager secret containing the ArgoCD admin password | `string` | n/a | yes |
 | enable_sso | Enable SSO integration | `bool` | `false` | no |
 | dex_config | Dex connector configuration for SSO | `string` | `""` | no |
 | argocd_url | External URL for ArgoCD | `string` | `""` | no |

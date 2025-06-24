@@ -42,36 +42,21 @@ resource "helm_release" "argocd" {
   set {
     name  = "redis-ha.enabled"
     value = var.control_cluster
-  }
-  # Set admin password from Secret Manager (plaintext) or provided hash
-  dynamic "set" {
-    for_each = local.use_plaintext_password ? [1] : []
-    content {
-      name  = "configs.secret.argocdServerAdminPasswordMtime"
-      value = formatdate("YYYY-MM-DD'T'hh:mm:ssZ", timestamp()) # Use current timestamp as string in RFC3339 format
-    }
+  } # Set admin password from Secret Manager
+  set {
+    name  = "configs.secret.argocdServerAdminPasswordMtime"
+    value = formatdate("YYYY-MM-DD'T'hh:mm:ssZ", timestamp()) # Use current timestamp as string in RFC3339 format
   }
 
-  dynamic "set" {
-    for_each = local.use_plaintext_password ? [1] : []
-    content {
-      name  = "configs.secret.argocdServerAdminPassword"
-      value = local.admin_password
-    }
-  }
-
-  dynamic "set" {
-    for_each = !local.use_plaintext_password && local.admin_password_hash != null ? [1] : []
-    content {
-      name  = "configs.secret.argocdServerAdminPassword"
-      value = local.admin_password_hash
-    }
+  set {
+    name  = "configs.secret.argocdServerAdminPassword"
+    value = local.admin_password
   }
 
   # Control creation of password secret
   set {
     name  = "configs.secret.createSecret"
-    value = local.use_plaintext_password || local.admin_password_hash != null ? true : false
+    value = true
   }
 
   # Configure SSO integration if enabled

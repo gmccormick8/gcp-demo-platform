@@ -231,12 +231,9 @@ jobs:
             # Get the ArgoCD external IP directly from terraform output
           ARGOCD_URL=$(terraform output -raw argocd_url || echo "Not available")
           ARGOCD_IP=$(terraform output -json argocd_info | jq -r '.value.external_ip // "Not available"')
-          PASSWORD_INFO=$(terraform output -json argocd_info | jq -r '.value.password_info // "Not available"')
-          
-          echo "- **URL:** [$ARGOCD_URL]($ARGOCD_URL)" >> $GITHUB_STEP_SUMMARY
-          echo "- **External IP:** \`$ARGOCD_IP\`" >> $GITHUB_STEP_SUMMARY
+            echo "- **URL:** [$ARGOCD_URL]($ARGOCD_URL)" >> $GITHUB_STEP_SUMMARY
           echo "- **Username:** \`admin\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Password:** $PASSWORD_INFO" >> $GITHUB_STEP_SUMMARY
+          echo "- **Password:** Stored in Secret Manager. Access with: \`gcloud secrets versions access latest --secret=${{ secrets.ARGOCD_SECRET_NAME }} --project=${{ secrets.PROJECT_ID }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Repository:** \`$(terraform output -json argocd_info | jq -r '.value.gitops_repo // "Not available"')\`" >> $GITHUB_STEP_SUMMARY
           
           # Set outputs for use in subsequent steps

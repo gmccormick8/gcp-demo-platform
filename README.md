@@ -22,36 +22,36 @@ This repository demonstrates a secure infrastructure deployment to Google Cloud 
    chmod +x init.sh
    ```
 
-3. Run the improved initialization script for each environment:
+3. Run the initialization script for each environment (password is required):
    ```bash
-   # For production environment with custom ArgoCD password
+   # For production environment with ArgoCD password
    ./init.sh prod SecurePassword123
 
-   # For staging environment with auto-generated password
-   ./init.sh staging
+   # For staging environment with ArgoCD password
+   ./init.sh staging MySecurePassword456
 
-   # For development environment with auto-generated password
-   ./init.sh dev
+   # For development environment with ArgoCD password
+   ./init.sh dev DevPassword789
    ```
 
-   This single script now:
+   The password must be at least 8 characters long.
+
+   This script:
    - Sets up Workload Identity Federation
    - Creates a Terraform service account with least privilege
    - Creates a secure Terraform state bucket with versioning
-   - Creates an ArgoCD admin password in Secret Manager
+   - Creates an ArgoCD admin password in Secret Manager (using your provided password)
    - Outputs all necessary GitHub secrets
 
 4. Configure GitHub environments:
    - Create environments for `dev`, `staging`, and `prod`
    - Add the secrets output by the script to each environment:
-     - `PROJECT_ID`
-     - `WORKLOAD_IDENTITY_PROVIDER`
+     - `PROJECT_ID`     - `WORKLOAD_IDENTITY_PROVIDER`
      - `TERRAFORM_SA_EMAIL`
      - `TF_STATE_BUCKET`
      - `ENVIRONMENT` (set to `dev`, `staging`, or `prod` according to the environment)
      - `APPROVERS` (a comma-separated list of GitHub usernames who should be notified for manual approval)
-     - `ARGOCD_SECRET_NAME`
-     - `ARGOCD_ADMIN_PASSWORD` (consider storing this in a password manager instead)
+     - `ARGOCD_SECRET_NAME` (name of the Secret Manager secret containing the ArgoCD password)
 
 4. Configure GitHub Environments:
    - Go to your repository settings
@@ -81,8 +81,21 @@ This repository demonstrates a secure infrastructure deployment to Google Cloud 
 ## Security Features
 
 - Workload Identity Federation for keyless authentication
-- Environment-specific service accounts
+- Environment-specific service accounts 
 - State bucket versioning enabled
+- Secure storage of ArgoCD admin password in Secret Manager
+- Required explicit password setting during initialization
+
+## Accessing ArgoCD After Deployment
+
+After a successful deployment, you can access ArgoCD using the following steps:
+
+1. Get the ArgoCD URL from the deployment outputs (shown in GitHub Actions summary)
+2. Retrieve the admin password from Secret Manager:
+   ```bash
+   gcloud secrets versions access latest --secret=argocd-admin-password --project=YOUR_PROJECT_ID
+   ```
+3. Log in with username `admin` and the password retrieved from Secret Manager
 - Branch protection rules recommended
 - Separate environments with isolated state storage
 - Environment-specific GitOps branches for configuration management

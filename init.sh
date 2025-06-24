@@ -12,9 +12,9 @@
 #   - Valid GCP project with billing enabled
 #   - Project Owner or Editor permissions
 #
-# Usage: ./init.sh <branch> [argocd-password]
+# Usage: ./init.sh <branch> <argocd-password>
 #   - branch: dev, staging, or prod
-#   - argocd-password: Optional custom password for ArgoCD (default: auto-generated)
+#   - argocd-password: Required password for ArgoCD (must be at least 8 characters)
 
 # Exit immediately if a command exits with a non-zero status.
 set -e
@@ -37,7 +37,7 @@ echo "Using Project ID: '$PROJECT_ID'"
 # Check for branch parameter
 if [ -z "$1" ]; then
   echo "Error: Branch parameter is required (dev, staging, or prod)"
-  echo "Usage: ./init.sh <branch>"
+  echo "Usage: ./init.sh <branch> <argocd-password>"
   exit 1
 fi
 
@@ -47,8 +47,19 @@ if [[ ! "$BRANCH" =~ ^(dev|staging|prod)$ ]]; then
   exit 1
 fi
 
-# Generate a secure ArgoCD password if not provided
-ARGOCD_PASSWORD="${2:-$(openssl rand -base64 16)}"
+# Check for the required ArgoCD password parameter
+if [ -z "$2" ]; then
+  echo "Error: ArgoCD password parameter is required"
+  echo "Usage: ./init.sh <branch> <argocd-password>"
+  exit 1
+fi
+
+# Validate that the password is at least 8 characters long
+ARGOCD_PASSWORD="$2"
+if [ ${#ARGOCD_PASSWORD} -lt 8 ]; then
+  echo "Error: ArgoCD password must be at least 8 characters long"
+  exit 1
+fi
 
 # Main script logic
 echo "Step 1/5: Enabling required APIs..."

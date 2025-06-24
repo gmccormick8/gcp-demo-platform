@@ -25,7 +25,6 @@ output "argocd_info" {
     server_service_name = module.argocd.server_service_name
     external_ip         = module.argocd.external_ip
     admin_username      = "admin"
-    password_info       = module.argocd.argocd_server_admin_password_info
     gitops_repo         = var.gitops_repo_url != "" ? var.gitops_repo_url : "https://github.com/gmccormick8/gcp-demo-platform-app.git"
     gitops_branch       = var.environment
     loadbalancer_ip_cmd = "kubectl --context=${local.clusters.central.cluster_name} get svc -n ${module.argocd.argocd_namespace} ${module.argocd.server_service_name} -o jsonpath='{.status.loadBalancer.ingress[0].ip}'"

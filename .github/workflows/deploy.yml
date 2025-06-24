@@ -63,8 +63,9 @@ jobs:
           TF_VAR_argocd_secret_name: ${{ secrets.ARGOCD_SECRET_NAME }}
           TF_VAR_environment: ${{ github.ref_name }}
           GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.gcp-auth.outputs.access_token }}
+          TF_IN_AUTOMATION: "true"
         run: |
-          terraform plan -detailed-exitcode -out=terraform-plan.tfplan -input=false \
+          terraform plan -detailed-exitcode -out=terraform-plan.tfplan -input=false -no-color \
             -var="project_id=${{ secrets.PROJECT_ID }}" \
             -var="argocd_secret_name=${{ secrets.ARGOCD_SECRET_NAME }}" \
             -var="environment=${{ github.ref_name }}" || echo "exitcode=$?" >> $GITHUB_OUTPUT
@@ -76,6 +77,11 @@ jobs:
           if [[ "${{ steps.plan.outputs.exitcode }}" == "2" ]]; then
             echo "has_changes=true" >> $GITHUB_OUTPUT
             echo "Changes detected in Terraform plan"
+          elif [[ "${{ steps.plan.outputs.exitcode }}" == "1" ]]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "Errors detected in Terraform plan"
+            echo "Errors detected in Terraform plan" >> $GITHUB_STEP_SUMMARY
+            exit 1
           else
             echo "has_changes=false" >> $GITHUB_OUTPUT
             echo "No changes detected in Terraform plan"
@@ -188,6 +194,7 @@ jobs:
           TF_VAR_argocd_secret_name: ${{ secrets.ARGOCD_SECRET_NAME }}
           TF_VAR_environment: ${{ github.ref_name }}
           GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.gcp-auth-apply.outputs.access_token }}
+          TF_IN_AUTOMATION: "true"
         run: terraform apply -auto-approve terraform-plan.tfplan      
         
       - name: Display Terraform Outputs

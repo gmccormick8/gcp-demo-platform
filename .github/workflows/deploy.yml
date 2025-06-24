@@ -85,8 +85,8 @@ jobs:
           else
             echo "has_changes=false" >> $GITHUB_OUTPUT
             echo "No changes detected in Terraform plan"
-          fi
-
+          fi      
+          
       - name: Upload Terraform Plan
         if: steps.check_changes.outputs.has_changes == 'true'
         uses: actions/upload-artifact@v4
@@ -102,12 +102,13 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           planfile: terraform-plan.tfplan
-          skip-empty: true      
+          skip-empty: true
           
       - name: Create Plan Summary File
         id: create_plan_summary
         if: steps.check_changes.outputs.has_changes == 'true'
         run: |
+          # Create the plan summary file with proper quoting to avoid shell interpretation
           echo '${{ steps.plan_markdown.outputs.markdown }}' > plan_summary.md
 
       - name: Upload Plan Summary
@@ -214,8 +215,8 @@ jobs:
           TF_VAR_environment: ${{ github.ref_name }}
           GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.gcp-auth-apply.outputs.access_token }}
           TF_IN_AUTOMATION: "true"
-        run: terraform apply -auto-approve terraform-plan.tfplan      
-        
+        run: terraform apply -auto-approve terraform-plan.tfplan
+          
       - name: Display Terraform Outputs
         id: terraform_outputs
         if: ${{ needs.plan.outputs.has_changes == 'true' }}
@@ -225,16 +226,18 @@ jobs:
           echo "## Terraform Deployment Complete" >> $GITHUB_STEP_SUMMARY
           echo "Environment: **${{ github.ref_name }}**" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
-          # ArgoCD Access Information
+            # ArgoCD Access Information
           echo "### ArgoCD Access Information" >> $GITHUB_STEP_SUMMARY
-            # Get the ArgoCD external IP directly from terraform output
+          # Get the ArgoCD external IP directly from terraform output
           ARGOCD_URL=$(terraform output -raw argocd_url || echo "Not available")
           ARGOCD_IP=$(terraform output -json argocd_info | jq -r '.value.external_ip // "Not available"')
-            echo "- **URL:** [$ARGOCD_URL]($ARGOCD_URL)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Username:** \`admin\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Password:** Stored in Secret Manager. Access with: \`gcloud secrets versions access latest --secret=${{ secrets.ARGOCD_SECRET_NAME }} --project=${{ secrets.PROJECT_ID }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Repository:** \`$(terraform output -json argocd_info | jq -r '.value.gitops_repo // "Not available"')\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL:** [$ARGOCD_URL]($ARGOCD_URL)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Username:** admin" >> $GITHUB_STEP_SUMMARY
+          # Quote the output to prevent command execution
+          echo "- **Password:** Stored in Secret Manager. Access with: gcloud secrets versions access latest --secret=\"${{ secrets.ARGOCD_SECRET_NAME }}\" --project=\"${{ secrets.PROJECT_ID }}\"" >> $GITHUB_STEP_SUMMARY
+          # Use printf instead of direct command substitution to avoid shell interpretation
+          REPO_URL=$(terraform output -json argocd_info | jq -r '.value.gitops_repo // "Not available"')
+          printf "- **Repository:** %s\n" "$REPO_URL" >> $GITHUB_STEP_SUMMARY
           
           # Set outputs for use in subsequent steps
           echo "argocd_url=$ARGOCD_URL" >> $GITHUB_OUTPUT
@@ -243,7 +246,9 @@ jobs:
           # Add cluster details
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### GKE Cluster Information" >> $GITHUB_STEP_SUMMARY
-          terraform output -json gke_clusters | jq -r '.value | to_entries[] | "- **\(.key)**: \(.value.name) (\(.value.location))"' >> $GITHUB_STEP_SUMMARY
+          # Save the output to a file first to avoid shell interpretation issues
+          terraform output -json gke_clusters > clusters.json
+          jq -r '.value | to_entries[] | "- **" + .key + "**: " + .value.name + " (" + .value.location + ")"' clusters.json >> $GITHUB_STEP_SUMMARY
           
           # Display full outputs in the log
           echo ""

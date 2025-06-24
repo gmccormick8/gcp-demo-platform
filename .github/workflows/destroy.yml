@@ -122,6 +122,11 @@ jobs:
         with:
           name: terraform-plan
 
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.12.0'
+
       - name: Output Readable Plan
         id: plan_markdown
         uses: borchero/terraform-plan-comment@v2

@@ -103,7 +103,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           planfile: terraform-plan.tfplan
           skip-empty: true
-
   manual-approval:
     needs: plan
     if: ${{ needs.plan.outputs.has_changes == 'true' }}
@@ -117,6 +116,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: terraform-plan
+          
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.12.0'
 
       - name: Output Readable Plan
         id: plan_markdown

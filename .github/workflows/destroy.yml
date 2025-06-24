@@ -17,24 +17,22 @@ on:
         type: string
 
 jobs:
-  plan:
+  destroy:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
+
+    permissions:
+      contents: 'read'
     
     # Only proceed if confirmation matches environment and branch name matches environment
     if: inputs.confirmation == inputs.environment && endsWith(github.ref_name, inputs.environment)
-    
-    permissions:
-      contents: 'read'
-      id-token: 'write'
-
-    outputs:
-      markdown: ${{ steps.plan_markdown.outputs.markdown }}
-
+     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+        with:
+          fetch-depth: 0      
+     
       - name: Authenticate to Google Cloud
         id: gcp-auth
         uses: google-github-actions/auth@v2
@@ -44,7 +42,7 @@ jobs:
           service_account: ${{ secrets.TERRAFORM_SA_EMAIL }}
           token_format: "access_token"
           create_credentials_file: true
-      
+          
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -58,101 +56,15 @@ jobs:
         run: |
           terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
 
-      - name: Terraform Plan Destroy
+      - name: Terraform Destroy
+        id: destroy
         env:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
           TF_VAR_argocd_secret_name: ${{ secrets.ARGOCD_SECRET_NAME }}
           TF_VAR_environment: ${{ github.ref_name }}
           GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.gcp-auth.outputs.access_token }}
-          TF_IN_AUTOMATION: "true"
         run: |
-          # Create destroy plan
-          terraform plan -destroy -out=terraform-plan.tfplan -no-color
-          
-      - name: Output Readable Plan
-        id: plan_markdown
-        uses: borchero/terraform-plan-comment@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          planfile: terraform-plan.tfplan
-          skip-empty: true
-
-      - name: Upload Terraform Plan
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-plan
-          path: |
-            terraform-plan.tfplan
-          retention-days: 1
-
-  manual-approval:
-    needs: plan
-    runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
-    if: inputs.confirmation == inputs.environment && endsWith(github.ref_name, inputs.environment)
-    permissions:
-      issues: write
-      pull-requests: write
-    steps:
-      - name: Manual Approval
-        uses: trstringer/manual-approval@v1
-        with:
-          secret: ${{ secrets.GITHUB_TOKEN }}
-          approvers: ${{ secrets.APPROVERS}}
-          minimum-approvals: 1
-          issue-title: 'Manual Approval for ${{ inputs.environment }} Destruction'
-          issue-body: |
-            Review this ${{ inputs.environment }} destroy plan carefully before proceeding!
-            ${{ needs.plan.outputs.markdown }}
-          fail-on-denial: true
-
-  destroy:
-    needs: [plan, manual-approval]
-    runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
-    if: inputs.confirmation == inputs.environment && endsWith(github.ref_name, inputs.environment)
-    permissions:
-      contents: 'read'
-      id-token: 'write'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Authenticate to GCP
-        id: gcp-auth
-        uses: google-github-actions/auth@v2
-        with:
-          project_id: ${{ secrets.PROJECT_ID }}
-          workload_identity_provider: '${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}'
-          service_account: ${{ secrets.TERRAFORM_SA_EMAIL }}
-          token_format: "access_token"
-          create_credentials_file: true
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: '1.12.0'
-      
-      - name: Terraform Init
-        env:
-          TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
-          TF_VAR_argocd_secret_name: ${{ secrets.ARGOCD_SECRET_NAME }}
-          TF_VAR_environment: ${{ inputs.environment }}
-        run: |
-          terraform init \
-            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
-
-      - name: Download Terraform Plan
-        uses: actions/download-artifact@v4
-        with:
-          name: terraform-plan
-    
-      - name: Terraform Apply
-        env:
-          TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
-          TF_VAR_argocd_secret_name: ${{ secrets.ARGOCD_SECRET_NAME }}
-          TF_VAR_environment: ${{ inputs.environment }}
-          GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.gcp-auth.outputs.access_token }}
-          TF_IN_AUTOMATION: "true"
-        run: terraform apply -auto-approve terraform-plan.tfplan
+          terraform destroy -auto-approve \
+            -var="project_id=${{ secrets.PROJECT_ID }}" \
+            -var="argocd_secret_name=${{ secrets.ARGOCD_SECRET_NAME }}" \
+            -var="environment=${{ github.ref_name }}"

@@ -233,12 +233,12 @@ jobs:
           ARGOCD_URL=$(terraform output -raw argocd_url || echo "Not available")
           ARGOCD_IP=$(terraform output -json argocd_info | jq -r '.value.external_ip // "Not available"')
           echo "- **URL:** [$ARGOCD_URL]($ARGOCD_URL)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Username:** admin" >> $GITHUB_STEP_SUMMARY
-          # Quote the output to prevent command execution
-          echo "- **Password:** Stored in Secret Manager. Access with: gcloud secrets versions access latest --secret=\"${{ secrets.ARGOCD_SECRET_NAME }}\" --project=\"${{ secrets.PROJECT_ID }}\"" >> $GITHUB_STEP_SUMMARY
-          # Use printf instead of direct command substitution to avoid shell interpretation
+          echo "- **Username:** admin" >> $GITHUB_STEP_SUMMARY          # Quote the output to prevent command execution
+          echo "- **Password:** Stored in Secret Manager." >> $GITHUB_STEP_SUMMARY
+          # Get repository URL safely
           REPO_URL=$(terraform output -json argocd_info | jq -r '.value.gitops_repo // "Not available"')
-          printf "- **Repository:** %s\n" "$REPO_URL" >> $GITHUB_STEP_SUMMARY
+          # Use printf with -- to indicate end of options
+          printf -- "- **Repository:** %s\n" "$REPO_URL" >> $GITHUB_STEP_SUMMARY
           
           # Set outputs for use in subsequent steps
           echo "argocd_url=$ARGOCD_URL" >> $GITHUB_OUTPUT

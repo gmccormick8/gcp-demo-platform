@@ -41,7 +41,7 @@ variable "argocd_url" {
 variable "gitops_repo_url" {
   description = "Git repository URL containing the application manifests"
   type        = string
-  default     = "https://github.com/gmccormick8/gcp-demo-platform-configs.git"
+  default     = "https://github.com/gmccormick8/gcp-demo-app.git"
 }
 
 variable "gitops_repo_branch" {

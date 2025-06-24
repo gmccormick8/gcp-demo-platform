@@ -103,6 +103,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           planfile: terraform-plan.tfplan
           skip-empty: true
+          
   manual-approval:
     needs: plan
     if: ${{ needs.plan.outputs.has_changes == 'true' }}
@@ -117,18 +118,12 @@ jobs:
         with:
           name: terraform-plan
           
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: '1.12.0'
-
       - name: Output Readable Plan
-        id: plan_markdown
-        uses: borchero/terraform-plan-comment@v2
+        id: plan_summary
+        uses: sgametrio/terraform-summary-action@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          planfile: terraform-plan.tfplan
-          skip-empty: true
+          title: 'Terraform Plan Summary for ${{ github.ref_name }}'
+          log-file: terraform-plan.tfplan
 
       - name: Manual Approval
         uses: trstringer/manual-approval@v1
@@ -139,7 +134,7 @@ jobs:
           issue-title: 'Manual Approval for ${{ github.ref_name }} Deployment'
           issue-body: |
             Please review this deployment to ${{ github.ref_name }}.
-            ${{ steps.plan_markdown.outputs.markdown}}
+            ${{ steps.plan_summary}}
           fail-on-denial: true
 
 

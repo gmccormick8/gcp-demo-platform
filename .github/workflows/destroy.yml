@@ -106,7 +106,23 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           planfile: terraform-plan.tfplan
-          skip-empty: true
+          skip-empty: true      
+          
+      - name: Create Plan Summary File
+        id: create_plan_summary
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          echo '${{ steps.plan_markdown.outputs.markdown }}' > plan_summary.md
+
+      - name: Upload Plan Summary
+        id: upload_plan_markdown
+        if: steps.check_changes.outputs.has_changes == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-summary
+          path: plan_summary.md
+          retention-days: 1
+
 
   manual-approval:
     needs: plan
@@ -117,23 +133,18 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      - name: Download Terraform Plan
+      - name: Download Terraform Plan Summary
         uses: actions/download-artifact@v4
         with:
-          name: terraform-plan
+          name: terraform-plan-summary
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: '1.12.0'
-
-      - name: Output Readable Plan
-        id: plan_markdown
-        uses: borchero/terraform-plan-comment@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          planfile: terraform-plan.tfplan
-          skip-empty: true
+      - name: Read Plan Summary
+        id: read_plan_summary
+        run: |
+          PLAN_SUMMARY=$(cat plan_summary.md)
+          # Convert to JSON string and set as output
+          PLAN_SUMMARY_JSON=$(echo "$PLAN_SUMMARY" | jq -R -s '.')
+          echo "plan_summary=$PLAN_SUMMARY_JSON" >> $GITHUB_OUTPUT
 
       - name: Manual Approval
         uses: trstringer/manual-approval@v1
@@ -144,8 +155,11 @@ jobs:
           issue-title: 'Manual Approval for ${{ inputs.environment }} Destruction'
           issue-body: |
             Review this ${{ inputs.environment }} destroy plan carefully before proceeding!
-            ${{ steps.plan_markdown.outputs.markdown}}
+            
+            ## Terraform Plan Summary
+            ${{ fromJson(steps.read_plan_summary.outputs.plan_summary) }}
           fail-on-denial: true
+
 
   destroy:
     needs: [plan, manual-approval]
@@ -155,7 +169,6 @@ jobs:
     permissions:
       contents: 'read'
       id-token: 'write'
-
 
     steps:
       - name: Checkout code
@@ -204,3 +217,4 @@ jobs:
           GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.gcp-auth-apply.outputs.access_token }}
           TF_IN_AUTOMATION: "true"
         run: terraform apply -auto-approve terraform-plan.tfplan
+        

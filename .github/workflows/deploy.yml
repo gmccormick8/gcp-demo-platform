@@ -118,6 +118,7 @@ jobs:
           name: terraform-plan-summary
           path: plan_summary.md
           retention-days: 1
+ 
           
   manual-approval:
     needs: plan
@@ -127,8 +128,8 @@ jobs:
     permissions:
       issues: write
       pull-requests: write
-    steps:      
     
+    steps:      
       - name: Download Terraform Plan Summary
         uses: actions/download-artifact@v4
         with:

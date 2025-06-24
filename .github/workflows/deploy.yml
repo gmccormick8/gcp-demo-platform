@@ -242,14 +242,48 @@ jobs:
           
           # Set outputs for use in subsequent steps
           echo "argocd_url=$ARGOCD_URL" >> $GITHUB_OUTPUT
-          echo "argocd_ip=$ARGOCD_IP" >> $GITHUB_OUTPUT
-          
-          # Add cluster details
+          echo "argocd_ip=$ARGOCD_IP" >> $GITHUB_OUTPUT          # Add cluster details
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### GKE Cluster Information" >> $GITHUB_STEP_SUMMARY
-          # Save the output to a file first to avoid shell interpretation issues
+          echo "Retrieving cluster information..." >> $GITHUB_STEP_SUMMARY
+          
+          # Debug: Show raw terraform output
+          echo "Debug: Raw terraform output for gke_clusters:"
+          terraform output gke_clusters
+          echo "-----------------------------------"
+          
+          # Try different approaches to handle the output
           terraform output -json gke_clusters > clusters.json
-          jq -r '.value | to_entries[] | "- **" + .key + "**: " + .value.name + " (" + .value.location + ")"' clusters.json >> $GITHUB_STEP_SUMMARY
+          echo "Debug: Contents of clusters.json:"
+          cat clusters.json
+          echo "-----------------------------------"
+          
+          # Process output with safeguards
+          if [ -s clusters.json ] && [ "$(cat clusters.json)" != "null" ]; then
+            # Try to safely extract cluster information
+            if jq 'type' clusters.json | grep -q "object"; then
+              echo "Processing as object..."
+              jq -r '.value | to_entries[] | "- **" + .key + "**: " + .value.name + " (" + .value.location + ")"' clusters.json >> $GITHUB_STEP_SUMMARY || echo "- Error processing cluster info with jq" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "Processing clusters directly..."
+              terraform output gke_clusters | sed 's/^/- /' >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- No cluster information available or format not as expected. See logs for details." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Try direct approach for clusters as a fallback
+          if [ -f clusters.json ] && [ "$(cat clusters.json)" != "null" ]; then
+            echo "### Alternative Cluster Information" >> $GITHUB_STEP_SUMMARY
+            # Attempt to retrieve clusters directly using terraform output command
+            CLUSTERS_OUTPUT=$(terraform output -json | jq -r '.gke_clusters.value | to_entries[] | "- **" + .key + "**: " + .value.name + " (" + .value.location + ")"' 2>/dev/null || echo "Failed to parse clusters")
+            
+            if [ "$CLUSTERS_OUTPUT" != "Failed to parse clusters" ]; then
+              echo "$CLUSTERS_OUTPUT" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- Unable to parse cluster information" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
           
           # Display full outputs in the log
           echo ""

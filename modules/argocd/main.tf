@@ -84,9 +84,8 @@ resource "helm_release" "argocd" {
     name  = "applicationSet.enabled"
     value = true
   }
-
   set {
-    name  = "applicationSet.replicaCount"
+    name  = "applicationSet.replicas"
     value = var.control_cluster ? 2 : 1
   }
 
@@ -95,16 +94,21 @@ resource "helm_release" "argocd" {
     name  = "notifications.enabled"
     value = true
   }
+
+  # Set insecure mode properly using the recommended config parameter
+  set {
+    name  = "configs.params.server\\.insecure"
+    value = "true"
+  }
   values = [<<-EOT
     server:
-      extraArgs:
-        - --insecure
-      config:
-        url: "${var.argocd_url}"
       service:
         annotations:
           cloud.google.com/neg: '{"ingress": true}'
-      additionalApplications:
+    configs:
+      cm:
+        url: "${var.argocd_url}"
+    additionalApplications:
       - name: cluster-resources
         namespace: argocd
         destination:
@@ -113,7 +117,7 @@ resource "helm_release" "argocd" {
         project: default
         source:
           repoURL: "${var.gitops_repo_url}"
-          targetRevision: ${var.gitops_repo_branch}
+          targetRevision: "${var.gitops_repo_branch}"
           path: cluster-resources
         syncPolicy:
           automated:

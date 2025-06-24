@@ -95,14 +95,21 @@ jobs:
           path: |
             terraform-plan.tfplan
           retention-days: 1
-          
-      - name: Output Plan Summary
-        id: plan_markdown
-        uses: borchero/terraform-plan-comment@v2
+
+      - name: Output Readable Plan
+        id: plan_summary
+        uses: sgametrio/terraform-summary-action@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          planfile: terraform-plan.tfplan
-          skip-empty: true
+          title: 'Terraform Plan Summary for ${{ github.ref_name }}'
+          log-file: terraform-plan.tfplan
+          
+      #- name: Output Plan Summary
+      #  id: plan_markdown
+      #  uses: borchero/terraform-plan-comment@v2
+      #  with:
+      #    token: ${{ secrets.GITHUB_TOKEN }}
+      #    planfile: terraform-plan.tfplan
+      #    skip-empty: true
           
   manual-approval:
     needs: plan

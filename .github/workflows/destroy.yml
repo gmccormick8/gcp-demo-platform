@@ -112,7 +112,9 @@ jobs:
         id: create_plan_summary
         if: steps.check_changes.outputs.has_changes == 'true'
         run: |
-          echo '${{ steps.plan_markdown.outputs.markdown }}' > plan_summary.md
+          cat << EOF > plan_summary.md
+          ${{ steps.plan_markdown.outputs.markdown }}
+          EOF
 
       - name: Upload Plan Summary
         id: upload_plan_markdown

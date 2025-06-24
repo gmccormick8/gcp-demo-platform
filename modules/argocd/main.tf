@@ -5,10 +5,9 @@ resource "helm_release" "argocd" {
   namespace        = "argocd"
   create_namespace = true
   version          = "5.51.4"
-  # Increase timeouts for GitHub Actions
-  timeout       = 600 # 10 minutes
-  wait          = true
-  wait_for_jobs = true
+  timeout          = 600
+  wait             = true
+  wait_for_jobs    = true
 
   set {
     name  = "server.service.type"
@@ -45,20 +44,35 @@ resource "helm_release" "argocd" {
     name  = "redis-ha.enabled"
     value = var.control_cluster
   }
-
-  # Set admin password from Secret Manager or provided hash
+  # Set admin password from Secret Manager (plaintext) or provided hash
   dynamic "set" {
-    for_each = local.admin_password_hash != null ? [1] : []
+    for_each = local.use_plaintext_password ? [1] : []
+    content {
+      name  = "configs.secret.argocdServerAdminPasswordMtime"
+      value = "1" # Force password update on changes
+    }
+  }
+
+  dynamic "set" {
+    for_each = local.use_plaintext_password ? [1] : []
+    content {
+      name  = "configs.secret.argocdServerAdminPassword"
+      value = local.admin_password
+    }
+  }
+
+  dynamic "set" {
+    for_each = !local.use_plaintext_password && local.admin_password_hash != null ? [1] : []
     content {
       name  = "configs.secret.argocdServerAdminPassword"
       value = local.admin_password_hash
     }
   }
 
-  # Prevent insecure default passwords
+  # Control creation of password secret
   set {
     name  = "configs.secret.createSecret"
-    value = local.admin_password_hash == null ? false : true
+    value = local.use_plaintext_password || local.admin_password_hash != null ? true : false
   }
 
   # Configure SSO integration if enabled
@@ -100,7 +114,7 @@ resource "helm_release" "argocd" {
   values = [<<-EOT
     server:
       extraArgs:
-        - --insecure # Allow accessing without HTTPS via LoadBalancer
+        - --insecure
       config:
         url: "${var.argocd_url}"
       service:
@@ -210,4 +224,18 @@ resource "kubernetes_config_map" "argocd_projects" {
   }
 
   depends_on = [helm_release.argocd]
+}
+
+resource "time_sleep" "wait_for_lb_ip" {
+  depends_on      = [helm_release.argocd]
+  create_duration = "30s"
+}
+
+data "kubernetes_service" "argocd_server" {
+  depends_on = [time_sleep.wait_for_lb_ip]
+
+  metadata {
+    name      = "argocd-server"
+    namespace = "argocd"
+  }
 }

@@ -18,7 +18,6 @@ jobs:
 
     outputs:
       has_changes: ${{ steps.check_changes.outputs.has_changes }}
-      plan_summary: ${{ steps.plan_summary.outputs.summary }}
 
     steps:
       - name: Checkout code
@@ -64,8 +63,9 @@ jobs:
           TF_VAR_argocd_secret_name: ${{ secrets.ARGOCD_SECRET_NAME }}
           TF_VAR_environment: ${{ github.ref_name }}
           GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.gcp-auth.outputs.access_token }}
+          TF_IN_AUTOMATION: "true"
         run: |
-          terraform plan -detailed-exitcode -out=terraform-plan.tfplan -input=false \
+          terraform plan -detailed-exitcode -out=terraform-plan.tfplan -input=false -no-color \
             -var="project_id=${{ secrets.PROJECT_ID }}" \
             -var="argocd_secret_name=${{ secrets.ARGOCD_SECRET_NAME }}" \
             -var="environment=${{ github.ref_name }}" || echo "exitcode=$?" >> $GITHUB_OUTPUT
@@ -82,33 +82,22 @@ jobs:
             echo "No changes detected in Terraform plan"
           fi
 
-      - name: Output Readable Plan
-        run: terraform show -no-color terraform-plan.tfplan > plan.txt
-
-      - name: Create Plan Summary
-        id: plan_summary
-        if: steps.check_changes.outputs.has_changes == 'true'
-        run: |
-          echo 'summary<<EOF' >> $GITHUB_OUTPUT
-          grep -A 20 "Terraform will perform the following actions" plan.txt | head -n 20 >> $GITHUB_OUTPUT
-          echo "..." >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
       - name: Upload Terraform Plan
+        if: steps.check_changes.outputs.has_changes == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: terraform-plan
           path: |
             terraform-plan.tfplan
           retention-days: 1
-
-      - name: Upload Text Terraform Plan 
-        uses: actions/upload-artifact@v4
+          
+      - name: Output Plan Summary
+        id: plan_markdown
+        uses: borchero/terraform-plan-comment@v2
         with:
-          name: terraform-plan-txt
-          path: |
-            plan.txt
-          retention-days: 1
+          token: ${{ secrets.GITHUB_TOKEN }}
+          planfile: terraform-plan.tfplan
+          skip-empty: true
 
   manual-approval:
     needs: plan
@@ -119,6 +108,19 @@ jobs:
       issues: write
       pull-requests: write
     steps:
+      - name: Download Terraform Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan
+
+      - name: Output Readable Plan
+        id: plan_markdown
+        uses: borchero/terraform-plan-comment@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          planfile: terraform-plan.tfplan
+          skip-empty: true
+
       - name: Manual Approval
         uses: trstringer/manual-approval@v1
         with:
@@ -128,7 +130,7 @@ jobs:
           issue-title: 'Manual Approval for ${{ github.ref_name }} Deployment'
           issue-body: |
             Please review this deployment to ${{ github.ref_name }}.
-            ${{ needs.plan.outputs.plan_summary }}
+            ${{ steps.plan_markdown.outputs.markdown}}
           fail-on-denial: true
 
 
@@ -161,8 +163,8 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: '1.12.0'
-
+          terraform_version: '1.12.0'      
+          
       - name: Terraform Init
         env:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
@@ -179,7 +181,7 @@ jobs:
       - name: Skip Apply if No Changes
         if: ${{ needs.plan.outputs.has_changes == 'false' }}
         run: echo "No changes detected in Terraform plan, skipping apply"
-
+        
       - name: Terraform Apply
         if: ${{ needs.plan.outputs.has_changes == 'true' }}
         env:
@@ -187,4 +189,43 @@ jobs:
           TF_VAR_argocd_secret_name: ${{ secrets.ARGOCD_SECRET_NAME }}
           TF_VAR_environment: ${{ github.ref_name }}
           GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.gcp-auth-apply.outputs.access_token }}
-        run: terraform apply -auto-approve terraform-plan.tfplan
+          TF_IN_AUTOMATION: "true"
+        run: terraform apply -auto-approve terraform-plan.tfplan      
+        
+      - name: Display Terraform Outputs
+        id: terraform_outputs
+        if: ${{ needs.plan.outputs.has_changes == 'true' }}
+        run: |
+          # Extract outputs directly
+          # Create a GitHub Actions Step Summary with Markdown
+          echo "## Terraform Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "Environment: **${{ github.ref_name }}**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # ArgoCD Access Information
+          echo "### ArgoCD Access Information" >> $GITHUB_STEP_SUMMARY
+            # Get the ArgoCD external IP directly from terraform output
+          ARGOCD_URL=$(terraform output -raw argocd_url || echo "Not available")
+          ARGOCD_IP=$(terraform output -json argocd_info | jq -r '.value.external_ip // "Not available"')
+          PASSWORD_INFO=$(terraform output -json argocd_info | jq -r '.value.password_info // "Not available"')
+          
+          echo "- **URL:** [$ARGOCD_URL]($ARGOCD_URL)" >> $GITHUB_STEP_SUMMARY
+          echo "- **External IP:** \`$ARGOCD_IP\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Username:** \`admin\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Password:** $PASSWORD_INFO" >> $GITHUB_STEP_SUMMARY
+          echo "- **Repository:** \`$(terraform output -json argocd_info | jq -r '.value.gitops_repo // "Not available"')\`" >> $GITHUB_STEP_SUMMARY
+          
+          # Set outputs for use in subsequent steps
+          echo "argocd_url=$ARGOCD_URL" >> $GITHUB_OUTPUT
+          echo "argocd_ip=$ARGOCD_IP" >> $GITHUB_OUTPUT
+          
+          # Add cluster details
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### GKE Cluster Information" >> $GITHUB_STEP_SUMMARY
+          terraform output -json gke_clusters | jq -r '.value | to_entries[] | "- **\(.key)**: \(.value.name) (\(.value.location))"' >> $GITHUB_STEP_SUMMARY
+          
+          # Display full outputs in the log
+          echo ""
+          echo "================ TERRAFORM OUTPUTS ================"
+          terraform output
+          echo "=================================================="

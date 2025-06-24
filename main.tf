@@ -167,6 +167,7 @@ module "argocd" {
   project_id                 = var.project_id
   admin_password_secret_name = var.argocd_secret_name
   control_cluster            = local.clusters.central.control_cluster
+  gitops_repo_url            = var.gitops_repo_url
   gitops_repo_branch         = var.environment
 
   # Register remote clusters with ArgoCD

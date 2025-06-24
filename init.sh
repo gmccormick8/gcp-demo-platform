@@ -108,7 +108,7 @@ gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_NAME}" \
   --display-name="GitHub Provider - ${BRANCH}" \
   --attribute-mapping="google.subject=assertion.sub,attribute.repository_id=assertion.repository_id,attribute.workflow_ref=assertion.workflow_ref,attribute.actor_id=assertion.actor_id" \
   --issuer-uri="https://token.actions.githubusercontent.com" \
-  --attribute-condition="assertion.repository_id == '999072242' && assertion.workflow_ref == 'gmccormick8/gcp-demo-platform/.github/workflows/deploy.yml@refs/heads/${BRANCH}' && assertion.actor_id == '74574750'" \
+  --attribute-condition="assertion.repository_id == '999072242' && (assertion.workflow_ref == 'gmccormick8/gcp-demo-platform/.github/workflows/deploy.yml@refs/heads/${BRANCH}' || assertion.workflow_ref == 'gmccormick8/gcp-demo-platform/.github/workflows/destroy.yml@refs/heads/${BRANCH}') && assertion.actor_id == '74574750'" \
 
 # Define the Workload Identity principal for the specific repo and branch
 WI_PRINCIPAL="principalSet://iam.googleapis.com/${POOL_ID}/attribute.repository_id/999072242"
@@ -214,33 +214,6 @@ rm /tmp/lifecycle-config.json
 # Set up ArgoCD admin password in Secret Manager
 echo "Step 5/5: Setting up ArgoCD admin password in Secret Manager..."
 
-# Check if htpasswd is available, if not try to install it
-if ! command -v htpasswd &> /dev/null; then
-  echo "htpasswd not found, attempting to install apache2-utils..."
-  if command -v apt-get &> /dev/null; then
-    sudo apt-get update && sudo apt-get install -y apache2-utils
-  elif command -v yum &> /dev/null; then
-    sudo yum install -y httpd-tools
-  elif command -v brew &> /dev/null; then
-    brew install httpd
-  else    echo "Warning: Could not install htpasswd utility. Using bcrypt via Python instead."
-    # Try using Python if available
-    if command -v python3 &> /dev/null; then
-      pip3 install --user bcrypt
-      PASSWORD_HASH=$(python3 -c "import bcrypt; import sys; print(bcrypt.hashpw('$ARGOCD_PASSWORD'.encode(), bcrypt.gensalt(rounds=10)).decode().replace('\$2b\$', '\$2a\$'))")
-    else
-      echo "Error: Could not generate bcrypt hash. No password generation tools available."
-      echo "Please install either apache2-utils, httpd-tools, or Python with bcrypt."
-      exit 1
-    fi
-  fi
-fi
-
-# Generate password hash with htpasswd if it's available
-if command -v htpasswd &> /dev/null && [ -z "$PASSWORD_HASH" ]; then
-  echo "Generating bcrypt hash for ArgoCD password..."
-  PASSWORD_HASH=$(htpasswd -bnBC 10 "" "$ARGOCD_PASSWORD" | tr -d ':\n' | sed 's/$2y/$2a/')
-fi
 
 # Create the secret in Secret Manager
 echo "Creating Secret Manager secret 'argocd-admin-password'..."
@@ -256,9 +229,9 @@ else
   echo "Secret '$SECRET_NAME' already exists."
 fi
 
-# Add the password hash to the secret
-echo "Adding password hash to secret..."
-echo -n "$PASSWORD_HASH" | gcloud secrets versions add "$SECRET_NAME" --data-file=- --project="$PROJECT_ID"
+# Add the password to the secret
+echo "Adding password to secret..."
+echo -n "$ARGOCD_PASSWORD" | gcloud secrets versions add "$SECRET_NAME" --data-file=- --project="$PROJECT_ID"
 
 # Grant access to the Terraform service account
 echo "Granting access to Terraform service account..."

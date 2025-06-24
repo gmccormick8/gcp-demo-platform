@@ -15,6 +15,12 @@ variable "environment" {
   default     = "dev"
 }
 
+variable "gitops_repo_url" {
+  description = "URL of the Git repository containing ArgoCD configuration"
+  type        = string
+  default     = "https://github.com/gmccormick8/gcp-demo-platform-app.git"
+}
+
 variable "master_authorized_networks" {
   description = "List of CIDR blocks that are allowed to access the master's API endpoint"
   type = list(object({
@@ -23,7 +29,7 @@ variable "master_authorized_networks" {
   }))
   default = [
     {
-      cidr_block   = "0.0.0.0/0" # Allow all IPs for demonstration - restrict this in production!
+      cidr_block   = "0.0.0.0/0"
       display_name = "All IPs - For GitHub Actions"
     }
   ]

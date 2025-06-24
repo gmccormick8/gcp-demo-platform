@@ -64,7 +64,7 @@ jobs:
           TF_VAR_environment: ${{ github.ref_name }}
           GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.gcp-auth.outputs.access_token }}
         run: |
-          terraform plan -detailed-exitcode -out=terraform-plan.tfplan -input=false -no-color \
+          terraform plan -detailed-exitcode -out=terraform-plan.tfplan -input=false \
             -var="project_id=${{ secrets.PROJECT_ID }}" \
             -var="argocd_secret_name=${{ secrets.ARGOCD_SECRET_NAME }}" \
             -var="environment=${{ github.ref_name }}" || echo "exitcode=$?" >> $GITHUB_OUTPUT

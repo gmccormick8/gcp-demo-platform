@@ -63,7 +63,6 @@ jobs:
           TF_VAR_argocd_secret_name: ${{ secrets.ARGOCD_SECRET_NAME }}
           TF_VAR_environment: ${{ github.ref_name }}
           GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.gcp-auth.outputs.access_token }}
-          TF_IN_AUTOMATION: "true"
         run: |
           terraform plan -detailed-exitcode -out=terraform-plan.tfplan -input=false -no-color \
             -var="project_id=${{ secrets.PROJECT_ID }}" \
@@ -189,7 +188,6 @@ jobs:
           TF_VAR_argocd_secret_name: ${{ secrets.ARGOCD_SECRET_NAME }}
           TF_VAR_environment: ${{ github.ref_name }}
           GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.gcp-auth-apply.outputs.access_token }}
-          TF_IN_AUTOMATION: "true"
         run: terraform apply -auto-approve terraform-plan.tfplan      
         
       - name: Display Terraform Outputs

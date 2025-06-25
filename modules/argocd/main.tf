@@ -100,6 +100,23 @@ resource "helm_release" "argocd" {
     name  = "configs.params.server\\.insecure"
     value = "true"
   }
+  # Add repository configuration with hardcoded URL
+  set {
+    name  = "configs.repositories.demo-app.url"
+    value = "https://github.com/gmccormick8/gcp-demo-app.git"
+  }
+
+  set {
+    name  = "configs.repositories.demo-app.name"
+    value = "demo-app"
+  }
+
+  # Use main branch if not specified
+  set {
+    name  = "configs.repositories.demo-app.targetRevision"
+    value = var.gitops_repo_branch != "" ? var.gitops_repo_branch : "main"
+  }
+
   values = [<<-EOT
     server:
       service:
@@ -107,8 +124,21 @@ resource "helm_release" "argocd" {
           cloud.google.com/neg: '{"ingress": true}'
     configs:
       cm:
-        url: "${var.argocd_url}"
-    additionalApplications:
+        url: "${var.argocd_url}"    additionalApplications:
+      - name: demo-app
+        namespace: argocd
+        destination:
+          server: https://kubernetes.default.svc
+          namespace: default
+        project: default
+        source:
+          repoURL: "https://github.com/gmccormick8/gcp-demo-app.git"
+          targetRevision: "${var.gitops_repo_branch != "" ? var.gitops_repo_branch : "dev"}"
+          path: "."
+        syncPolicy:
+          automated:
+            prune: true
+            selfHeal: true
       - name: cluster-resources
         namespace: argocd
         destination:
@@ -116,8 +146,8 @@ resource "helm_release" "argocd" {
           namespace: argocd
         project: default
         source:
-          repoURL: "${var.gitops_repo_url}"
-          targetRevision: "${var.gitops_repo_branch}"
+          repoURL: "https://github.com/gmccormick8/gcp-demo-app.git"
+          targetRevision: "${var.gitops_repo_branch != "" ? var.gitops_repo_branch : "main"}"
           path: cluster-resources
         syncPolicy:
           automated:

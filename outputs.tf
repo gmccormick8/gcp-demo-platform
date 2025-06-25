@@ -32,5 +32,5 @@ output "argocd_info" {
 
 output "argocd_url" {
   description = "URL to access the ArgoCD UI"
-  value       = "https://${module.argocd.external_ip}"
+  value       = "http://${module.argocd.external_ip}"
 }

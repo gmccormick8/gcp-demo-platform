@@ -126,34 +126,34 @@ resource "helm_release" "argocd" {
       cm:
         url: "${var.argocd_url}"
         additionalApplications:
-      - name: demo-app
-        namespace: argocd
-        destination:
-          server: https://kubernetes.default.svc
-          namespace: default
-        project: default
-        source:
-          repoURL: "https://github.com/gmccormick8/gcp-demo-app.git"
-          targetRevision: "${var.gitops_repo_branch != "" ? var.gitops_repo_branch : "dev"}"
-          path: "."
-        syncPolicy:
-          automated:
-            prune: true
-            selfHeal: true
-      - name: cluster-resources
-        namespace: argocd
-        destination:
-          server: https://kubernetes.default.svc
-          namespace: argocd
-        project: default
-        source:
-          repoURL: "https://github.com/gmccormick8/gcp-demo-app.git"
-          targetRevision: "${var.gitops_repo_branch != "" ? var.gitops_repo_branch : "main"}"
-          path: cluster-resources
-        syncPolicy:
-          automated:
-            prune: true
-            selfHeal: true
+          - name: demo-app
+            namespace: argocd
+            destination:
+              server: https://kubernetes.default.svc
+              namespace: default
+            project: default
+            source:
+              repoURL: "https://github.com/gmccormick8/gcp-demo-app.git"
+              targetRevision: "${var.gitops_repo_branch != "" ? var.gitops_repo_branch : "dev"}"
+              path: "."
+            syncPolicy:
+              automated:
+                prune: true
+                selfHeal: true
+          - name: cluster-resources
+            namespace: argocd
+            destination:
+              server: https://kubernetes.default.svc
+              namespace: argocd
+            project: default
+            source:
+              repoURL: "https://github.com/gmccormick8/gcp-demo-app.git"
+              targetRevision: "${var.gitops_repo_branch != "" ? var.gitops_repo_branch : "main"}"
+              path: cluster-resources
+            syncPolicy:
+              automated:
+                prune: true
+                selfHeal: true
 
     applicationSet:
       extraRules:

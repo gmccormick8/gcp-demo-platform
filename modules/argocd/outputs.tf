@@ -10,7 +10,7 @@ output "argocd_server_service" {
 
 output "argocd_server_admin_password_info" {
   description = "Information about the ArgoCD admin password"
-  value       = "Plaintext password stored in Secret Manager: ${var.admin_password_secret_name}"
+  value       = "Password stored in Secret Manager: ${var.admin_password_secret_name}. Retrieve with: gcloud secrets versions access latest --secret=${var.admin_password_secret_name}"
 }
 
 output "server_service_name" {

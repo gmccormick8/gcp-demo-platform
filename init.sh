@@ -242,7 +242,10 @@ fi
 
 # Add the password to the secret
 echo "Adding password to secret..."
+# Store the plaintext password - ArgoCD will handle the bcrypt hashing internally
 echo -n "$ARGOCD_PASSWORD" | gcloud secrets versions add "$SECRET_NAME" --data-file=- --project="$PROJECT_ID"
+
+echo "Note: Password stored as plaintext in Secret Manager. ArgoCD will hash it internally."
 
 # Grant access to the Terraform service account
 echo "Granting access to Terraform service account..."

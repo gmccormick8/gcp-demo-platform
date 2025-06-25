@@ -47,10 +47,15 @@ resource "helm_release" "argocd" {
     name  = "configs.secret.argocdServerAdminPasswordMtime"
     value = formatdate("YYYY-MM-DD'T'hh:mm:ssZ", timestamp()) # Use current timestamp as string in RFC3339 format
   }
-
   set {
     name  = "configs.secret.argocdServerAdminPassword"
     value = local.admin_password
+  }
+
+  # This flag allows plaintext passwords to be used initially and then hashed by ArgoCD
+  set {
+    name  = "configs.secret.argocdServerAdminPasswordMtime"
+    value = formatdate("YYYY-MM-DD'T'hh:mm:ssZ", timestamp())
   }
 
   # Control creation of password secret

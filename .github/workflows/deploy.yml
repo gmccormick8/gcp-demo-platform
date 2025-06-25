@@ -231,10 +231,9 @@ jobs:
           echo "### ArgoCD Access Information" >> $GITHUB_STEP_SUMMARY
           # Get the ArgoCD external IP directly from terraform output
           ARGOCD_URL=$(terraform output -raw argocd_url || echo "Not available")
-          ARGOCD_IP=$(terraform output -json argocd_info | jq -r '.value.external_ip // "Not available"')
-          echo "- **URL:** [$ARGOCD_URL]($ARGOCD_URL)" >> $GITHUB_STEP_SUMMARY
+          ARGOCD_IP=$(terraform output -json argocd_info | jq -r '.value.external_ip // "Not available"')          echo "- **URL:** [$ARGOCD_URL]($ARGOCD_URL)" >> $GITHUB_STEP_SUMMARY
           echo "- **Username:** admin" >> $GITHUB_STEP_SUMMARY          # Quote the output to prevent command execution
-          echo "- **Password:** Stored in Secret Manager." >> $GITHUB_STEP_SUMMARY
+          echo "- **Password:** Stored in Secret Manager: **${{ secrets.ARGOCD_SECRET_NAME }}** (Use gcloud secrets versions access latest --secret=${{ secrets.ARGOCD_SECRET_NAME }})" >> $GITHUB_STEP_SUMMARY
           # Get repository URL safely
           REPO_URL=$(terraform output -json argocd_info | jq -r '.value.gitops_repo // "Not available"')
           # Use printf with -- to indicate end of options
@@ -252,26 +251,40 @@ jobs:
           terraform output gke_clusters
           echo "-----------------------------------"
           
-          # Try different approaches to handle the output
-          terraform output -json gke_clusters > clusters.json
-          echo "Debug: Contents of clusters.json:"
-          cat clusters.json
-          echo "-----------------------------------"
+      - name: Verify ArgoCD Deployment
+        if: ${{ needs.plan.outputs.has_changes == 'true' }}
+        run: |
+          echo "Verifying ArgoCD deployment and credentials..."
           
-          # Process output with safeguards
-          if [ -s clusters.json ] && [ "$(cat clusters.json)" != "null" ]; then
-            # Try to safely extract cluster information
-            if jq 'type' clusters.json | grep -q "object"; then
-              echo "Processing as object..."
-              jq -r '.value | to_entries[] | "- **" + .key + "**: " + .value.name + " (" + .value.location + ")"' clusters.json >> $GITHUB_STEP_SUMMARY || echo "- Error processing cluster info with jq" >> $GITHUB_STEP_SUMMARY
-            else
-              echo "Processing clusters directly..."
-              terraform output gke_clusters | sed 's/^/- /' >> $GITHUB_STEP_SUMMARY
-            fi
-          else
-            echo "- No cluster information available or format not as expected. See logs for details." >> $GITHUB_STEP_SUMMARY
+          # Get argocd URL from previous step
+          ARGOCD_URL=$(terraform output -raw argocd_url || echo "Not available")
+          if [[ "$ARGOCD_URL" == "Not available" ]]; then
+            echo "Warning: ArgoCD URL not available, skipping verification"
+            exit 0
           fi
           
+          # Wait for ArgoCD to be ready (simple HTTP check)
+          echo "Waiting for ArgoCD server to be ready..."
+          max_attempts=30
+          attempt=1
+          while [[ $attempt -le $max_attempts ]]; do
+            if curl -s -k -m 5 "$ARGOCD_URL"; then
+              echo "ArgoCD server is responding!"
+              break
+            fi
+            echo "Attempt $attempt/$max_attempts - ArgoCD server not ready yet, waiting..."
+            sleep 10
+            ((attempt++))
+          done
+          
+          if [[ $attempt -gt $max_attempts ]]; then
+            echo "Warning: ArgoCD server did not become ready within the timeout period"
+            echo "You may need to verify the credentials manually"
+          fi
+          
+          echo "ArgoCD Admin password is stored in Secret Manager: ${{ secrets.ARGOCD_SECRET_NAME }}"
+          echo "You can retrieve it using: gcloud secrets versions access latest --secret=${{ secrets.ARGOCD_SECRET_NAME }}"
+                   
           # Try direct approach for clusters as a fallback
           if [ -f clusters.json ] && [ "$(cat clusters.json)" != "null" ]; then
             echo "### Alternative Cluster Information" >> $GITHUB_STEP_SUMMARY

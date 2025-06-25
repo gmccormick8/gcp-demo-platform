@@ -124,7 +124,8 @@ resource "helm_release" "argocd" {
           cloud.google.com/neg: '{"ingress": true}'
     configs:
       cm:
-        url: "${var.argocd_url}"    additionalApplications:
+        url: "${var.argocd_url}"
+        additionalApplications:
       - name: demo-app
         namespace: argocd
         destination:

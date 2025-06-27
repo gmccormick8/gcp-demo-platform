@@ -4,10 +4,24 @@ variable "namespace" {
   default     = "argocd"
 }
 
-variable "server_service_type" {
-  description = "Kubernetes service type for ArgoCD server"
+variable "chart_version" {
+  description = "Version of the ArgoCD chart that will be used to deploy ArgoCD application"
   type        = string
-  default     = "ClusterIP"
+  default     = "7.3.11"
+}
+
+variable "argocd_config" {
+  description = "Configuration settings for ArgoCD, including hostname, HA options, notifications, and custom values"
+  type        = any
+  default = {
+    hostname                     = ""
+    values_yaml                  = ""
+    redis_ha_enabled             = false
+    autoscaling_enabled          = false
+    slack_notification_token     = ""
+    argocd_notifications_enabled = false
+    ingress_class_name           = "gce"
+  }
 }
 
 variable "admin_password" {
@@ -23,26 +37,27 @@ variable "admin_password_secret_id" {
   default     = ""
 }
 
+# Legacy variables maintained for backwards compatibility
 variable "ingress_enabled" {
-  description = "Whether to enable Kubernetes ingress for ArgoCD"
+  description = "DEPRECATED: Use argocd_config.hostname instead (non-empty hostname enables ingress)"
   type        = bool
   default     = false
 }
 
 variable "ingress_host" {
-  description = "Hostname for ArgoCD ingress when enabled"
+  description = "DEPRECATED: Use argocd_config.hostname instead"
   type        = string
   default     = "argocd.example.com"
 }
 
 variable "ingress_annotations" {
-  description = "Map of annotations for ArgoCD ingress"
+  description = "DEPRECATED: Use argocd_config.values_yaml instead"
   type        = map(string)
   default     = {}
 }
 
 variable "ingress_tls" {
-  description = "TLS configuration for ArgoCD ingress"
+  description = "DEPRECATED: Use argocd_config.values_yaml for TLS configuration"
   type = list(object({
     hosts      = list(string)
     secretName = string
@@ -51,15 +66,21 @@ variable "ingress_tls" {
 }
 
 variable "ha_enabled" {
-  description = "Whether to enable high availability mode for ArgoCD"
+  description = "DEPRECATED: Use argocd_config.redis_ha_enabled instead"
   type        = bool
   default     = false
 }
 
 variable "server_insecure" {
-  description = "Whether to allow insecure connections to ArgoCD server"
+  description = "DEPRECATED: Use argocd_config.values_yaml instead"
   type        = bool
   default     = true
+}
+
+variable "server_service_type" {
+  description = "DEPRECATED: Use argocd_config.values_yaml instead"
+  type        = string
+  default     = "ClusterIP"
 }
 
 variable "argocd_projects" {

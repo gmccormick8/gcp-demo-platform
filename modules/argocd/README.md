@@ -1,132 +1,129 @@
 # ArgoCD Terraform Module
 
-This module deploys ArgoCD to a Kubernetes cluster to enable GitOps-based continuous delivery for your applications.
+This module installs and configures ArgoCD on a Kubernetes cluster (GKE), setting up projects and applications from a GitOps repository. It leverages the community-maintained `squareops/argocd/kubernetes` Terraform module.
 
 ## Features
 
-- Highly available ArgoCD deployment for production environments
-- Automatic registration of remote clusters
-- Support for ApplicationSet controller for multi-cluster deployments
-- SSO integration capability
-- Predefined sensible defaults
+- Simplified ArgoCD deployment using the squareops community module
+- Configures ArgoCD Projects and Applications 
+- Supports custom Ingress configuration
+- Manages ArgoCD admin password via Secret Manager integration
+- Creates GitOps project structure automatically
+- Configures automatic application syncing
+- High availability configuration options
 
 ## Usage
 
-### Basic Example
-
 ```hcl
 module "argocd" {
-  source           = "./modules/argocd"
-  cluster_name     = module.gke_clusters["central"].cluster_name
-  cluster_endpoint = module.gke_clusters["central"].cluster_endpoint
-  cluster_ca_cert  = module.gke_clusters["central"].master_auth.cluster_ca_certificate
-  control_cluster  = true
-}
-```
-
-### Advanced Example with Remote Clusters
-
-```hcl
-module "argocd" {
-  source           = "./modules/argocd"
-  cluster_name     = module.gke_clusters["central"].cluster_name
-  cluster_endpoint = module.gke_clusters["central"].cluster_endpoint
-  cluster_ca_cert  = module.gke_clusters["central"].master_auth.cluster_ca_certificate
-  control_cluster  = true
-  # Use Secret Manager for the ArgoCD admin password
-  project_id = var.project_id
-  admin_password_secret_name = "argocd-admin-password"
+  source = "./modules/argocd"
   
-  # Alternatively, provide a bcrypt hash directly (less secure)
-  # admin_password_hash = var.argocd_admin_password
+  # Password from Secret Manager or explicit setting
+  admin_password_secret_id = var.argocd_secret_name
+  # or directly set the password (not recommended for production)
+  # admin_password = "your-secure-password"
   
-  # No external URL needed - we're using kubectl port-forward for access
+  # Environment and repository configuration
+  environment = var.environment
+  gitops_repo_url = var.gitops_repo_url
   
-  # Git repository for application configuration
-  gitops_repo_url = "https://github.com/example/gitops-config.git"
+  # Optional: Enable HA mode for production
+  ha_enabled = true
   
-  # Register remote clusters
-  remote_clusters = [
-    {
-      name           = "east-cluster"
-      endpoint       = "https://cluster-endpoint-east"
-      token          = "service-account-token"
-      ca_certificate = "cluster-ca-certificate"
-    },
-    {
-      name           = "west-cluster"
-      endpoint       = "https://cluster-endpoint-west"
-      token          = "service-account-token"
-      ca_certificate = "cluster-ca-certificate"
+  # Optional: Configure ingress
+  ingress_enabled = true
+  ingress_host = "argocd.example.com"
+  ingress_annotations = {
+    "kubernetes.io/ingress.class": "gce"
+  }
+  
+  # Create ArgoCD projects
+  argocd_projects = {
+    default = {
+      name        = "default"
+      description = "Default Project"
+      source_repos = [
+        var.gitops_repo_url
+      ]
+      destinations = [
+        {
+          server    = "https://kubernetes.default.svc"
+          namespace = "*"
+        }
+      ]
     }
-  ]
+  }
+  
+  # Create ArgoCD applications
+  argocd_applications = {
+    demo-app = {
+      name           = "demo-app"
+      project        = "default"
+      repo_url       = var.gitops_repo_url
+      target_revision = var.environment
+      path           = "charts/demo-app"
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = "demo"
+      }
+      sync_policy = {
+        automated = {
+          prune      = true
+          self_heal  = true
+          allow_empty = false
+        }
+        sync_options = ["CreateNamespace=true"]
+      }
+      helm_values = {
+        raw_values = <<-EOT
+          replicaCount: 2
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+        EOT
+      }
+    }
+  }
 }
 ```
 
 ## Requirements
 
-- Kubernetes cluster with RBAC enabled
-- Helm provider configured
-- Kubernetes provider configured
+- Kubernetes Cluster (GKE)
+- Helm provider
+- Kubernetes provider
+- Secret Manager access (optional)
+- Existing Git repository with Helm charts
 
-## Accessing ArgoCD
-
-This module is designed to work without a domain name or ingress controller. To access the ArgoCD UI:
-
-1. Set up kubectl to access your GKE cluster (using gcloud)
-   ```bash
-   gcloud container clusters get-credentials central-cluster --zone us-central1-c --project your-project-id
-   ```
-
-2. Set up port-forwarding to the ArgoCD server
-   ```bash
-   kubectl port-forward svc/argocd-server -n argocd 8080:443
-   ```
-
-3. Open your browser and navigate to https://localhost:8080
-
-4. Accept the self-signed certificate warning
-
-5. Login with:
-   - Username: admin
-   - Password: Retrieve from Secret Manager with the command:
-     ```bash
-     gcloud secrets versions access latest --secret=argocd-admin-password --project=your-project-id
-     ```
-
-The module provides these instructions as an output value for easy reference.
-
-## Variables
+## Inputs
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| control_cluster | Whether this is the control cluster for ArgoCD | `bool` | `false` | no |
-| cluster_name | Name of the Kubernetes cluster | `string` | n/a | yes |
-| cluster_endpoint | Endpoint of the Kubernetes cluster | `string` | n/a | yes |
-| cluster_ca_cert | CA certificate of the Kubernetes cluster | `string` | n/a | yes |
-| admin_password_secret_name | Name of the GCP Secret Manager secret containing the ArgoCD admin password | `string` | n/a | yes |
-| enable_sso | Enable SSO integration | `bool` | `false` | no |
-| dex_config | Dex connector configuration for SSO | `string` | `""` | no |
-| argocd_url | External URL for ArgoCD | `string` | `""` | no |
-| gitops_repo_url | Git repository URL for application manifests | `string` | `"https://github.com/gmccormick8/gcp-demo-platform-configs.git"` | no |
-| remote_clusters | List of remote clusters to register with ArgoCD | `list(object({...}))` | `[]` | no |
+| namespace | Kubernetes namespace for ArgoCD | `string` | `"argocd"` | no |
+| admin_password | Admin password for ArgoCD (directly set) | `string` | `""` | no |
+| admin_password_secret_id | Secret Manager secret ID with ArgoCD admin password | `string` | `""` | no |
+| environment | Environment/branch to deploy from the Git repository | `string` | `"main"` | no |
+| gitops_repo_url | URL of the Git repository with ArgoCD configs | `string` | `""` | no |
+| argocd_projects | Map of ArgoCD projects to create | `map(object)` | `{}` | no |
+| argocd_applications | Map of ArgoCD applications to create | `map(object)` | `{}` | no |
+| ingress_enabled | Whether to create an ingress for ArgoCD | `bool` | `false` | no |
+| ingress_host | Hostname for ArgoCD ingress | `string` | `"argocd.example.com"` | no |
+| server_service_type | Service type for ArgoCD server | `string` | `"ClusterIP"` | no |
+| ha_enabled | Enable high availability mode | `bool` | `false` | no |
+| server_insecure | Allow insecure connections to the server | `bool` | `true` | no |
+| custom_helm_values | Additional custom Helm values | `string` | `""` | no |
 
 ## Outputs
 
 | Name | Description |
 |------|-------------|
-| argocd_namespace | Namespace where ArgoCD is deployed |
-| argocd_server_service | Name of the ArgoCD server service |
-| argocd_server_admin_password | Initial admin password for ArgoCD server |
-
-## Notes
-
-1. For production deployments, make sure to:
-   - Set a custom admin password
-   - Configure a proper external URL
-   - Use a private Git repository with proper authentication
-   - Consider enabling SSO
-
-2. The default admin password is 'argocd123' if no custom password hash is provided.
-
-3. Remote clusters are registered automatically when `control_cluster = true` and the `remote_clusters` list is provided.
+| argocd_namespace | Namespace where ArgoCD is installed |
+| argocd_url | URL to access ArgoCD UI |
+| argocd_admin_username | ArgoCD admin username |
+| argocd_admin_password | ArgoCD admin password (sensitive) |
+| application_names | Names of ArgoCD applications created |
+| project_names | Names of ArgoCD projects created |

@@ -40,6 +40,49 @@ locals {
       control_cluster = false
     }
   }
+
+  # ArgoCD default applications based on environment
+  argocd_apps = {
+    "core-apps" = {
+      name            = "core-apps"
+      project         = "default"
+      repo_url        = var.gitops_repo_url
+      target_revision = var.environment
+      path            = "charts/core"
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = "core"
+      }
+      sync_policy = {
+        automated = {
+          prune       = true
+          self_heal   = true
+          allow_empty = false
+        }
+        sync_options = ["CreateNamespace=true"]
+      }
+    }
+
+    "demo-app" = {
+      name            = "demo-app"
+      project         = "default"
+      repo_url        = var.gitops_repo_url
+      target_revision = var.environment
+      path            = "charts/demo-app"
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = "demo"
+      }
+      sync_policy = {
+        automated = {
+          prune       = true
+          self_heal   = true
+          allow_empty = false
+        }
+        sync_options = ["CreateNamespace=true"]
+      }
+    }
+  }
 }
 
 # Create a VPC network and subnets
@@ -141,6 +184,64 @@ resource "google_gke_hub_feature" "mcs" {
   ]
 }
 
+# Create a global static IP address for ArgoCD ingress
+resource "google_compute_global_address" "argocd_ip" {
+  name         = "argocd-global-ip"
+  project      = var.project_id
+  description  = "Global static IP address for ArgoCD ingress"
+  address_type = "EXTERNAL"
+}
+
+# No managed certificate needed since we're using IP-based access
+
+# Install and configure ArgoCD in the central cluster after MCI is set up
+module "argocd" {
+  source = "./modules/argocd"
+
+  namespace                = "argocd"
+  admin_password_secret_id = var.argocd_secret_name
+  environment              = var.environment
+  gitops_repo_url          = var.gitops_repo_url
+
+  # Enable ingress for external access with public IP
+  ingress_enabled = true
+  ingress_host    = "" # Using IP-based access
+  ingress_annotations = {
+    "kubernetes.io/ingress.class" : "gce"
+    "kubernetes.io/ingress.global-static-ip-name" : google_compute_global_address.argocd_ip.name
+    "kubernetes.io/ingress.allow-http" : "true"
+  }
+
+  # Configure HA mode for production environments
+  ha_enabled = var.environment == "prod" ? true : false
+
+  # Set service type to NodePort for GKE Ingress compatibility with IP-based access
+  server_service_type = "NodePort"
+
+  # Use simple insecure setup for direct IP access
+  server_insecure = true
+
+  # Create ArgoCD projects
+  argocd_projects = {
+    default = {
+      name        = "default"
+      description = "Default Project"
+      source_repos = [
+        var.gitops_repo_url
+      ]
+      destinations = [
+        {
+          server    = "https://kubernetes.default.svc"
+          namespace = "*"
+        }
+      ]
+    }
+  }
+
+  # Create ArgoCD applications from local configuration
+  argocd_applications = local.argocd_apps
+}
+
 # Register clusters with GKE Hub and enable Multi-Cluster Ingress (MCI)
 resource "google_gke_hub_feature" "mci" {
   name     = "multiclusteringress"
@@ -159,49 +260,7 @@ resource "google_gke_hub_feature" "mci" {
   ]
 }
 
-module "argocd" {
-  source                     = "./modules/argocd"
-  cluster_name               = module.gke_clusters["central"].cluster_name
-  cluster_endpoint           = module.gke_clusters["central"].cluster_endpoint
-  cluster_ca_cert            = module.gke_clusters["central"].master_auth.cluster_ca_certificate
-  project_id                 = var.project_id
-  admin_password_secret_name = var.argocd_secret_name
-  control_cluster            = local.clusters.central.control_cluster
-  gitops_repo_url            = var.gitops_repo_url
-  gitops_repo_branch         = var.environment
 
-  # Register remote clusters with ArgoCD
-  remote_clusters = [
-    {
-      name           = module.gke_clusters["east"].cluster_name
-      endpoint       = "https://${module.gke_clusters["east"].cluster_endpoint}"
-      token          = data.google_client_config.default.access_token
-      ca_certificate = module.gke_clusters["east"].master_auth.cluster_ca_certificate
-      provider_alias = "east"
-    },
-    {
-      name           = module.gke_clusters["west"].cluster_name
-      endpoint       = "https://${module.gke_clusters["west"].cluster_endpoint}"
-      token          = data.google_client_config.default.access_token
-      ca_certificate = module.gke_clusters["west"].master_auth.cluster_ca_certificate
-      provider_alias = "west"
-    }
-  ]
-
-  providers = {
-    kubernetes      = kubernetes.central
-    kubernetes.east = kubernetes.east
-    kubernetes.west = kubernetes.west
-    helm            = helm
-    google          = google
-  }
-
-  depends_on = [
-    google_gke_hub_feature.mcs,
-    google_gke_hub_feature.mci,
-    module.gke_clusters
-  ]
-}
 
 # Cleanup dynamically created firewall rules for GKE clusters
 resource "terraform_data" "gke_fw_cleanup" {

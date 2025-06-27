@@ -1,0 +1,52 @@
+global:
+  image:
+    tag: v2.10.5
+
+server:
+  replicas: ${server_replica_count}
+  service:
+    type: ${server_service_type}
+
+  extraArgs:
+    - --insecure
+
+dex:
+  enabled: false
+
+redis:
+  enabled: true
+
+controller:
+  replicas: 1
+
+repoServer:
+  replicas: 1
+
+applicationSet:
+  replicaCount: 1
+
+configs:
+  params:
+    server.disable.auth: "false"
+  
+  cm:
+    admin.enabled: "true"
+    statusbadge.enabled: "true"
+    resource.compareoptions: |
+      ignoreAggregatedRoles: true
+    resource.exclusions: |
+      - kinds:
+        - Secret
+    application.instanceLabelKey: argocd.argoproj.io/instance
+    timeout.reconciliation: ${reconciliation_timeout}
+    
+  rbac:
+    policy.default: role:readonly
+    policy.csv: |
+      p, role:org-admin, applications, *, */*, allow
+      p, role:org-admin, clusters, get, *, allow
+      p, role:org-admin, repositories, get, *, allow
+      p, role:org-admin, repositories, create, *, allow
+      p, role:org-admin, repositories, update, *, allow
+      p, role:org-admin, repositories, delete, *, allow
+      g, admin, role:admin

@@ -1,24 +1,35 @@
 output "argocd_namespace" {
-  description = "Namespace where ArgoCD is deployed"
-  value       = "argocd"
+  description = "The Kubernetes namespace where ArgoCD is installed"
+  value       = module.argocd.namespace
 }
 
-output "argocd_server_service" {
-  description = "Name of the ArgoCD server service"
-  value       = helm_release.argocd.name
+output "argocd_server_service_name" {
+  description = "The name of the ArgoCD server Kubernetes service"
+  value       = module.argocd.argocd_server_service_name
 }
 
-output "argocd_server_admin_password_info" {
-  description = "Information about the ArgoCD admin password"
-  value       = "Password stored in Secret Manager: ${var.admin_password_secret_name}. Retrieve with: gcloud secrets versions access latest --secret=${var.admin_password_secret_name}"
+output "argocd_url" {
+  description = "The URL to access ArgoCD UI"
+  value       = var.ingress_enabled ? "https://${var.ingress_host}" : null
 }
 
-output "server_service_name" {
-  description = "Service name for the ArgoCD server"
-  value       = "argocd-server"
+output "argocd_admin_username" {
+  description = "The ArgoCD admin username"
+  value       = "admin"
 }
 
-output "external_ip" {
-  description = "External IP address assigned to the ArgoCD server LoadBalancer"
-  value       = length(data.kubernetes_service.argocd_server.status) > 0 ? data.kubernetes_service.argocd_server.status.0.load_balancer.0.ingress.0.ip : ""
+output "argocd_admin_password" {
+  description = "The ArgoCD admin password"
+  value       = var.admin_password != "" ? var.admin_password : (var.admin_password_secret_id != "" ? data.google_secret_manager_secret_version.argocd_admin_password[0].secret_data : module.argocd.argocd_admin_password)
+  sensitive   = true
+}
+
+output "application_names" {
+  description = "List of ArgoCD applications created"
+  value       = module.argocd.application_names
+}
+
+output "project_names" {
+  description = "List of ArgoCD projects created"
+  value       = module.argocd.project_names
 }

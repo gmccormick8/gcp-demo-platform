@@ -1,265 +1,79 @@
-resource "helm_release" "argocd" {
+module "argocd" {
+  source  = "squareops/argocd/kubernetes"
+  version = "1.5.1" # Check for the latest version
+
   name             = "argocd"
-  repository       = "https://argoproj.github.io/argo-helm"
-  chart            = "argo-cd"
-  namespace        = "argocd"
-  create_namespace = true
-  version          = "5.51.4"
-  timeout          = 600
-  wait             = true
-  wait_for_jobs    = true
+  namespace        = var.namespace
+  namespace_create = true
+  admin_password   = var.admin_password
 
-  set {
-    name  = "server.service.type"
-    value = "LoadBalancer"
-  }
+  # ArgoCD configuration
+  ha_enabled          = var.ha_enabled
+  server_insecure     = var.server_insecure
+  create_ingress      = var.ingress_enabled
+  ingress_annotations = var.ingress_annotations
+  ingress_host        = var.ingress_host
+  ingress_tls         = var.ingress_tls
+  service_type        = var.server_service_type
 
-  # Add annotations for GCP load balancer
-  set {
-    name  = "server.service.annotations.cloud\\.google\\.com/load-balancer-type"
-    value = "External"
-  }
+  # Repository and application configuration
+  repo_url        = var.gitops_repo_url
+  target_revision = var.environment
+  helm_values     = var.custom_helm_values
 
-  set {
-    name  = "controller.replicas"
-    value = var.control_cluster ? 2 : 1
-  }
+  # Applications configuration
+  applications = { for k, v in var.argocd_applications : k => {
+    name                   = v.name
+    namespace              = v.destination.namespace
+    create_namespace       = true
+    project                = lookup(v, "project", "default")
+    source_path            = v.path
+    source_repo            = v.repo_url
+    source_target_revision = v.target_revision
 
-  set {
-    name  = "server.replicas"
-    value = var.control_cluster ? 2 : 1
-  }
+    # Destination
+    destination_server = lookup(v.destination, "server", "https://kubernetes.default.svc")
 
-  set {
-    name  = "repoServer.replicas"
-    value = var.control_cluster ? 2 : 1
-  }
-  # Configure Redis HA if this is a control cluster
-  set {
-    name  = "redis.enabled"
-    value = true
-  }
-  set {
-    name  = "redis-ha.enabled"
-    value = var.control_cluster
-  } # Set admin password from Secret Manager
-  set {
-    name  = "configs.secret.argocdServerAdminPasswordMtime"
-    value = formatdate("YYYY-MM-DD'T'hh:mm:ssZ", timestamp()) # Use current timestamp as string in RFC3339 format
-  }
-  set {
-    name  = "configs.secret.argocdServerAdminPassword"
-    value = local.admin_password
-  }
+    # Sync policy
+    auto_prune     = v.sync_policy != null ? v.sync_policy.automated.prune : true
+    auto_self_heal = v.sync_policy != null ? v.sync_policy.automated.self_heal : true
 
-  # This flag allows plaintext passwords to be used initially and then hashed by ArgoCD
-  set {
-    name  = "configs.secret.argocdServerAdminPasswordMtime"
-    value = formatdate("YYYY-MM-DD'T'hh:mm:ssZ", timestamp())
-  }
+    # Helm values if provided
+    helm_values       = v.helm_values != null ? v.helm_values.raw_values : ""
+    helm_values_files = v.helm_values != null ? v.helm_values.value_files : []
+  } }
 
-  # Control creation of password secret
-  set {
-    name  = "configs.secret.createSecret"
-    value = true
-  }
+  # Projects configuration
+  projects = { for k, v in var.argocd_projects : k => {
+    name        = v.name
+    description = v.description
+    namespace   = var.namespace
 
-  # Configure SSO integration if enabled
-  dynamic "set" {
-    for_each = var.enable_sso ? [1] : []
-    content {
-      name  = "configs.cm.dex.config"
-      value = var.dex_config
-    }
-  }
+    # Source repositories
+    source_repos = v.source_repos
 
-  # ConfigMap custom settings
-  set {
-    name  = "configs.cm.application\\.resourceTrackingMethod"
-    value = "annotation"
-  }
+    # Destination configuration
+    destinations = [for dest in v.destinations : {
+      server    = dest.server
+      namespace = dest.namespace
+    }]
 
-  set {
-    name  = "configs.cm.timeout\\.reconciliation"
-    value = "180s"
-  }
-
-  # Allow ApplicationSets to create resources across all registered clusters
-  set {
-    name  = "applicationSet.enabled"
-    value = true
-  }
-  set {
-    name  = "applicationSet.replicas"
-    value = var.control_cluster ? 2 : 1
-  }
-
-  # Configure Notifications
-  set {
-    name  = "notifications.enabled"
-    value = true
-  }
-
-  # Set insecure mode properly using the recommended config parameter
-  set {
-    name  = "configs.params.server\\.insecure"
-    value = "true"
-  }
-  # Add repository configuration with hardcoded URL
-  set {
-    name  = "configs.repositories.demo-app.url"
-    value = "https://github.com/gmccormick8/gcp-demo-app.git"
-  }
-
-  set {
-    name  = "configs.repositories.demo-app.name"
-    value = "demo-app"
-  }
-
-  # Use main branch if not specified
-  set {
-    name  = "configs.repositories.demo-app.targetRevision"
-    value = var.gitops_repo_branch != "" ? var.gitops_repo_branch : "main"
-  }
-
-  values = [<<-EOT
-    server:
-      service:
-        annotations:
-          cloud.google.com/neg: '{"ingress": true}'
-    configs:
-      cm:
-        url: "${var.argocd_url}"
-        additionalApplications:
-          - name: demo-app
-            namespace: argocd
-            destination:
-              server: https://kubernetes.default.svc
-              namespace: default
-            project: default
-            source:
-              repoURL: "https://github.com/gmccormick8/gcp-demo-app.git"
-              targetRevision: "${var.gitops_repo_branch != "" ? var.gitops_repo_branch : "dev"}"
-              path: "."
-            syncPolicy:
-              automated:
-                prune: true
-                selfHeal: true
-          - name: cluster-resources
-            namespace: argocd
-            destination:
-              server: https://kubernetes.default.svc
-              namespace: argocd
-            project: default
-            source:
-              repoURL: "https://github.com/gmccormick8/gcp-demo-app.git"
-              targetRevision: "${var.gitops_repo_branch != "" ? var.gitops_repo_branch : "main"}"
-              path: cluster-resources
-            syncPolicy:
-              automated:
-                prune: true
-                selfHeal: true
-
-    applicationSet:
-      extraRules:
-        - apiGroups: [""]
-          resources: ["*"]
-          verbs: ["*"]
-    EOT
-  ]
-}
-
-# Create ClusterRoleBinding for ArgoCD to allow multi-cluster management
-resource "kubernetes_cluster_role_binding" "argocd_cluster_admin" {
-  metadata {
-    name = "argocd-application-controller-cluster-admin"
-  }
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "ClusterRole"
-    name      = "cluster-admin"
-  }
-  subject {
-    kind      = "ServiceAccount"
-    name      = "argocd-application-controller"
-    namespace = "argocd"
-  }
-
-  depends_on = [helm_release.argocd]
-}
-
-# Create registrations for remote clusters if this is the control cluster
-resource "kubernetes_secret" "remote_cluster_secrets" {
-  for_each = var.control_cluster ? { for idx, cluster in var.remote_clusters : cluster.name => cluster } : {}
-
-  provider = kubernetes
-
-  metadata {
-    name      = "cluster-${each.value.name}"
-    namespace = "argocd"
-    labels = {
-      "argocd.argoproj.io/secret-type" = "cluster"
-    }
-  }
-
-  data = {
-    name   = each.value.name
-    server = each.value.endpoint
-    config = jsonencode({
-      bearerToken = each.value.token
-      tlsClientConfig = {
-        insecure = false
-        caData   = each.value.ca_certificate
+    # Default cluster permissions
+    cluster_resource_whitelist = [
+      {
+        group = "*"
+        kind  = "*"
       }
-    })
-  }
+    ]
+    namespace_resource_blacklist = []
+  } }
 
-  depends_on = [helm_release.argocd]
+  depends_on = []
 }
 
-# Create a ConfigMap for the application projects
-resource "kubernetes_config_map" "argocd_projects" {
-  count = var.control_cluster ? 1 : 0
-
-  metadata {
-    name      = "argocd-projects"
-    namespace = "argocd"
-  }
-
-  data = {
-    "projects.yaml" = <<-EOT
-    apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: argocd-projects
-      namespace: argocd
-    data:
-      default-project: |
-        project: default
-        sourceRepos:
-        - '*'
-        destinations:
-        - namespace: '*'
-          server: '*'
-        clusterResourceWhitelist:
-        - group: '*'
-          kind: '*'
-    EOT
-  }
-
-  depends_on = [helm_release.argocd]
-}
-
-resource "time_sleep" "wait_for_lb_ip" {
-  depends_on      = [helm_release.argocd]
-  create_duration = "30s"
-}
-
-data "kubernetes_service" "argocd_server" {
-  depends_on = [time_sleep.wait_for_lb_ip]
-
-  metadata {
-    name      = "argocd-server"
-    namespace = "argocd"
-  }
+# Retrieve the ArgoCD admin password from Secret Manager if specified
+data "google_secret_manager_secret_version" "argocd_admin_password" {
+  count   = var.admin_password_secret_id != "" ? 1 : 0
+  secret  = var.admin_password_secret_id
+  version = "latest"
 }

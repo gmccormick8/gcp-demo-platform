@@ -1,78 +1,127 @@
-variable "control_cluster" {
-  description = "Indicates if the cluster is a control cluster"
+variable "namespace" {
+  description = "The Kubernetes namespace where ArgoCD will be installed"
+  type        = string
+  default     = "argocd"
+}
+
+variable "server_service_type" {
+  description = "Kubernetes service type for ArgoCD server"
+  type        = string
+  default     = "ClusterIP"
+}
+
+variable "admin_password" {
+  description = "The admin password for ArgoCD. If not specified, will use the password from Secret Manager if admin_password_secret_id is set"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "admin_password_secret_id" {
+  description = "The ID of the Secret Manager secret containing the plain text ArgoCD admin password"
+  type        = string
+  default     = ""
+}
+
+variable "ingress_enabled" {
+  description = "Whether to enable Kubernetes ingress for ArgoCD"
   type        = bool
   default     = false
 }
 
-variable "admin_password_secret_name" {
-  description = "Name of the GCP Secret Manager secret containing the plaintext ArgoCD admin password"
+variable "ingress_host" {
+  description = "Hostname for ArgoCD ingress when enabled"
   type        = string
-
-  validation {
-    condition     = var.admin_password_secret_name != ""
-    error_message = "The admin_password_secret_name is required and must be a valid Secret Manager secret name."
-  }
+  default     = "argocd.example.com"
 }
 
-variable "project_id" {
-  description = "The GCP project ID where secrets are stored"
-  type        = string
-  default     = ""
+variable "ingress_annotations" {
+  description = "Map of annotations for ArgoCD ingress"
+  type        = map(string)
+  default     = {}
 }
 
-variable "enable_sso" {
-  description = "Enable SSO integration with Dex"
-  type        = bool
-  default     = false
-}
-
-variable "dex_config" {
-  description = "Dex connector configuration for SSO"
-  type        = string
-  default     = ""
-}
-
-variable "argocd_url" {
-  description = "External URL for ArgoCD (optional)"
-  type        = string
-  default     = ""
-}
-
-variable "gitops_repo_url" {
-  description = "Git repository URL containing the application manifests"
-  type        = string
-  default     = "https://github.com/gmccormick8/gcp-demo-app.git"
-}
-
-variable "gitops_repo_branch" {
-  description = "Git branch to use for GitOps (usually matches the deployment environment: dev, staging, prod)"
-  type        = string
-  default     = "dev"
-}
-
-variable "remote_clusters" {
-  description = "List of remote clusters to register with ArgoCD"
+variable "ingress_tls" {
+  description = "TLS configuration for ArgoCD ingress"
   type = list(object({
-    name           = string
-    endpoint       = string
-    token          = string
-    ca_certificate = string
-    provider_alias = string
+    hosts      = list(string)
+    secretName = string
   }))
   default = []
 }
 
-variable "cluster_name" {
-  description = "Name of the Kubernetes cluster where ArgoCD is deployed"
-  type        = string
+variable "ha_enabled" {
+  description = "Whether to enable high availability mode for ArgoCD"
+  type        = bool
+  default     = false
 }
 
-variable "cluster_endpoint" {
-  description = "Endpoint of the Kubernetes cluster"
-  type        = string
+variable "server_insecure" {
+  description = "Whether to allow insecure connections to ArgoCD server"
+  type        = bool
+  default     = true
 }
 
-variable "cluster_ca_cert" {
-  description = "CA certificate of the Kubernetes cluster"
+variable "argocd_projects" {
+  description = "Map of ArgoCD projects to create"
+  type = map(object({
+    name         = string
+    description  = string
+    source_repos = list(string)
+    destinations = list(object({
+      server    = string
+      namespace = string
+    }))
+  }))
+  default = {}
+}
+
+variable "argocd_applications" {
+  description = "Map of ArgoCD applications to create"
+  type = map(object({
+    name            = string
+    project         = string
+    repo_url        = string
+    target_revision = string
+    path            = string
+    destination = object({
+      server    = string
+      namespace = string
+    })
+    sync_policy = optional(object({
+      automated = object({
+        prune       = bool
+        self_heal   = bool
+        allow_empty = bool
+      })
+      sync_options = list(string)
+    }))
+    helm_values = optional(object({
+      value_files = optional(list(string))
+      parameters = optional(list(object({
+        name  = string
+        value = string
+      })))
+      raw_values = optional(string)
+    }))
+  }))
+  default = {}
+}
+
+variable "environment" {
+  description = "Deployment environment (dev, staging, prod) - used for GitOps branch targeting"
   type        = string
+  default     = "main"
+}
+
+variable "gitops_repo_url" {
+  description = "URL of the Git repository containing application configurations"
+  type        = string
+  default     = ""
+}
+
+variable "custom_helm_values" {
+  description = "Custom Helm values to be merged with the module's values"
+  type        = string
+  default     = ""
 }

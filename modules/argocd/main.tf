@@ -1,6 +1,6 @@
 module "argocd" {
   source  = "squareops/argocd/kubernetes"
-  version = "1.5.1" # Check for the latest version
+  version = "3.0.1"
 
   name             = "argocd"
   namespace        = var.namespace

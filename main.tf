@@ -207,7 +207,8 @@ module "argocd" {
   project_id        = var.project_id
   cluster_endpoint  = module.gke_clusters["central"].cluster_endpoint
   cluster_ca_cert   = module.gke_clusters["central"].master_auth.cluster_ca_certificate
-  cluster_name      = module.gke_clusters["central"].cluster_name
+  cluster_name = module.gke_clusters["central"].cluster_name
+  access_token      = data.google_client_config.default.access_token
   argocd_namespace  = "argocd"
   argocd_helm_repo  = "https://argoproj.github.io/argo-helm"
   argocd_helm_chart = "argo-cd"

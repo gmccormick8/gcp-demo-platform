@@ -13,6 +13,11 @@ variable "cluster_ca_cert" {
   type        = string
 }
 
+variable "access_token" {
+  description = "Access token for Kubernetes provider"
+  type        = string
+}
+
 variable "cluster_name" {
   description = "The name of the cluster where ArgoCD will be deployed"
   type        = string

@@ -240,5 +240,5 @@ module "argocd_applicationset" {
   target_revision  = var.environment
   path             = "applications/demo-app"
 
-  depends_on = [ module.argocd ]
+  depends_on = [module.argocd]
 }

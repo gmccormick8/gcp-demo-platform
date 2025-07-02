@@ -219,10 +219,6 @@ module "argocd" {
       }
     }
   }
-
-  depends_on = [
-    module.gke_clusters["central"]
-  ]
 }
 
 module "argocd_applicationset" {
@@ -239,6 +235,4 @@ module "argocd_applicationset" {
   repo_url         = var.gitops_repo_url
   target_revision  = var.environment
   path             = "applications/demo-app"
-
-  depends_on = [module.argocd]
 }

@@ -227,9 +227,18 @@ module "argocd_applicationset" {
   project_id       = var.project_id
   argocd_namespace = "argocd"
   clusters = {
-    east    = module.gke_clusters["east"].cluster_endpoint
-    central = module.gke_clusters["central"].cluster_endpoint
-    west    = module.gke_clusters["west"].cluster_endpoint
+    east = {
+      endpoint       = module.gke_clusters["east"].cluster_endpoint
+      ca_certificate = module.gke_clusters["east"].master_auth.cluster_ca_certificate
+    }
+    central = {
+      endpoint       = module.gke_clusters["central"].cluster_endpoint
+      ca_certificate = module.gke_clusters["central"].master_auth.cluster_ca_certificate
+    }
+    west = {
+      endpoint       = module.gke_clusters["west"].cluster_endpoint
+      ca_certificate = module.gke_clusters["west"].master_auth.cluster_ca_certificate
+    }
   }
   application_name = "demo-app"
   repo_url         = var.gitops_repo_url

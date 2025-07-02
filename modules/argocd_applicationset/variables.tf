@@ -9,8 +9,11 @@ variable "argocd_namespace" {
 }
 
 variable "clusters" {
-  description = "Map of cluster endpoints"
-  type        = map(string)
+  description = "Map of cluster endpoints and CA certificates"
+  type = map(object({
+    endpoint       = string
+    ca_certificate = string
+  }))
 }
 
 variable "application_name" {

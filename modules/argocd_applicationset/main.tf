@@ -1,8 +1,8 @@
 provider "kubernetes" {
   alias                  = "argocd"
-  host                   = var.clusters["central"]
+  host                   = var.clusters["central"].endpoint
   token                  = data.google_client_config.default.access_token
-  cluster_ca_certificate = base64decode(module.gke_clusters["central"].master_auth.cluster_ca_certificate)
+  cluster_ca_certificate = base64decode(var.clusters["central"].ca_certificate)
 }
 
 resource "kubernetes_manifest" "applicationset" {
@@ -22,15 +22,15 @@ resource "kubernetes_manifest" "applicationset" {
             elements = [
               {
                 cluster = "east"
-                url     = var.clusters["east"]
+                url     = var.clusters["east"].endpoint
               },
               {
                 cluster = "central"
-                url     = var.clusters["central"]
+                url     = var.clusters["central"].endpoint
               },
               {
                 cluster = "west"
-                url     = var.clusters["west"]
+                url     = var.clusters["west"].endpoint
               }
             ]
           }

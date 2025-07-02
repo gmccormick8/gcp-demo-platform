@@ -9,9 +9,6 @@ locals {
       pods_network_name     = "demo-east-pods"
       services_network_name = "demo-east-services"
       master_ipv4_cidr      = "172.16.0.0/28"
-
-      # ArgoCD cluster config
-      control_cluster = false
     }
     central = {
       # GKE cluster config
@@ -22,9 +19,6 @@ locals {
       pods_network_name     = "demo-central-pods"
       services_network_name = "demo-central-services"
       master_ipv4_cidr      = "172.16.1.0/28"
-
-      # ArgoCD cluster config
-      control_cluster = true
     }
     west = {
       # GKE cluster config
@@ -35,52 +29,6 @@ locals {
       pods_network_name     = "demo-west-pods"
       services_network_name = "demo-west-services"
       master_ipv4_cidr      = "172.16.2.0/28"
-
-      # ArgoCD cluster config
-      control_cluster = false
-    }
-  }
-
-  # ArgoCD default applications based on environment
-  argocd_apps = {
-    "core-apps" = {
-      name            = "core-apps"
-      project         = "default"
-      repo_url        = var.gitops_repo_url
-      target_revision = var.environment
-      path            = "charts/core"
-      destination = {
-        server    = "https://kubernetes.default.svc"
-        namespace = "core"
-      }
-      sync_policy = {
-        automated = {
-          prune       = true
-          self_heal   = true
-          allow_empty = false
-        }
-        sync_options = ["CreateNamespace=true"]
-      }
-    }
-
-    "demo-app" = {
-      name            = "demo-app"
-      project         = "default"
-      repo_url        = var.gitops_repo_url
-      target_revision = var.environment
-      path            = "charts/demo-app"
-      destination = {
-        server    = "https://kubernetes.default.svc"
-        namespace = "demo"
-      }
-      sync_policy = {
-        automated = {
-          prune       = true
-          self_heal   = true
-          allow_empty = false
-        }
-        sync_options = ["CreateNamespace=true"]
-      }
     }
   }
 }
@@ -172,6 +120,7 @@ module "gke_clusters" {
   ]
 }
 
+
 # Configure GKE Hub and enable Multi-Cluster Services (MCS)
 resource "google_gke_hub_feature" "mcs" {
   name     = "multiclusterservicediscovery"
@@ -184,63 +133,6 @@ resource "google_gke_hub_feature" "mcs" {
   ]
 }
 
-# Create a global static IP address for ArgoCD ingress
-resource "google_compute_global_address" "argocd_ip" {
-  name         = "argocd-global-ip"
-  project      = var.project_id
-  description  = "Global static IP address for ArgoCD ingress"
-  address_type = "EXTERNAL"
-}
-
-# No managed certificate needed since we're using IP-based access
-
-# Install and configure ArgoCD in the central cluster after MCI is set up
-module "argocd" {
-  source = "./modules/argocd"
-
-  namespace                = "argocd"
-  admin_password_secret_id = var.argocd_secret_name
-  environment              = var.environment
-  gitops_repo_url          = var.gitops_repo_url
-
-  # Enable ingress for external access with public IP
-  ingress_enabled = true
-  ingress_host    = "" # Using IP-based access
-  ingress_annotations = {
-    "kubernetes.io/ingress.class" : "gce"
-    "kubernetes.io/ingress.global-static-ip-name" : google_compute_global_address.argocd_ip.name
-    "kubernetes.io/ingress.allow-http" : "true"
-  }
-
-  # Configure HA mode for production environments
-  ha_enabled = var.environment == "prod" ? true : false
-
-  # Set service type to NodePort for GKE Ingress compatibility with IP-based access
-  server_service_type = "NodePort"
-
-  # Use simple insecure setup for direct IP access
-  server_insecure = true
-
-  # Create ArgoCD projects
-  argocd_projects = {
-    default = {
-      name        = "default"
-      description = "Default Project"
-      source_repos = [
-        var.gitops_repo_url
-      ]
-      destinations = [
-        {
-          server    = "https://kubernetes.default.svc"
-          namespace = "*"
-        }
-      ]
-    }
-  }
-
-  # Create ArgoCD applications from local configuration
-  argocd_applications = local.argocd_apps
-}
 
 # Register clusters with GKE Hub and enable Multi-Cluster Ingress (MCI)
 resource "google_gke_hub_feature" "mci" {
@@ -259,7 +151,6 @@ resource "google_gke_hub_feature" "mci" {
     terraform_data.fleet_membership_cleanup
   ]
 }
-
 
 
 # Cleanup dynamically created firewall rules for GKE clusters
@@ -308,4 +199,46 @@ resource "terraform_data" "fleet_membership_cleanup" {
       sleep 90
     EOT
   }
+}
+
+module "argocd" {
+  source = "./modules/argocd"
+
+  project_id        = var.project_id
+  cluster_endpoint  = module.gke_clusters["central"].cluster_endpoint
+  cluster_ca_cert   = module.gke_clusters["central"].master_auth.cluster_ca_certificate
+  cluster_name      = module.gke_clusters["central"].cluster_name
+  argocd_namespace  = "argocd"
+  argocd_helm_repo  = "https://argoproj.github.io/argo-helm"
+  argocd_helm_chart = "argo-cd"
+  argocd_version    = "5.0.0"
+  argocd_values = {
+    global : {
+      server : {
+        extraArgs : ["--enable-cluster"]
+      }
+    }
+  }
+
+  depends_on = [
+    module.gke_clusters["central"]
+  ]
+}
+
+module "argocd_applicationset" {
+  source = "./modules/argocd_applicationset"
+
+  project_id       = var.project_id
+  argocd_namespace = "argocd"
+  clusters = {
+    east    = module.gke_clusters["east"].cluster_endpoint
+    central = module.gke_clusters["central"].cluster_endpoint
+    west    = module.gke_clusters["west"].cluster_endpoint
+  }
+  application_name = "demo-app"
+  repo_url         = var.gitops_repo_url
+  target_revision  = var.environment
+  path             = "applications/demo-app"
+
+  depends_on = [ module.argocd ]
 }

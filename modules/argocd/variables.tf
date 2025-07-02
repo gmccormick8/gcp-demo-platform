@@ -1,148 +1,46 @@
-variable "namespace" {
-  description = "The Kubernetes namespace where ArgoCD will be installed"
+variable "project_id" {
+  description = "The GCP project ID"
+  type        = string
+}
+
+variable "cluster_endpoint" {
+  description = "The endpoint of the cluster where ArgoCD will be deployed"
+  type        = string
+}
+
+variable "cluster_ca_cert" {
+  description = "The cluster CA certificate"
+  type        = string
+}
+
+variable "cluster_name" {
+  description = "The name of the cluster where ArgoCD will be deployed"
+  type        = string
+}
+
+variable "argocd_namespace" {
+  description = "The namespace where ArgoCD will be installed"
   type        = string
   default     = "argocd"
 }
 
-variable "chart_version" {
-  description = "Version of the ArgoCD chart that will be used to deploy ArgoCD application"
+variable "argocd_helm_repo" {
+  description = "The Helm repository for ArgoCD"
   type        = string
-  default     = "7.3.11"
 }
 
-variable "argocd_config" {
-  description = "Configuration settings for ArgoCD, including hostname, HA options, notifications, and custom values"
-  type        = any
-  default = {
-    hostname                     = ""
-    values_yaml                  = ""
-    redis_ha_enabled             = false
-    autoscaling_enabled          = false
-    slack_notification_token     = ""
-    argocd_notifications_enabled = false
-    ingress_class_name           = "gce"
-  }
-}
-
-variable "admin_password" {
-  description = "The admin password for ArgoCD. If not specified, will use the password from Secret Manager if admin_password_secret_id is set"
+variable "argocd_helm_chart" {
+  description = "The Helm chart name for ArgoCD"
   type        = string
-  default     = ""
-  sensitive   = true
 }
 
-variable "admin_password_secret_id" {
-  description = "The ID of the Secret Manager secret containing the plain text ArgoCD admin password"
+variable "argocd_version" {
+  description = "The version of the ArgoCD Helm chart"
   type        = string
-  default     = ""
 }
 
-# Legacy variables maintained for backwards compatibility
-variable "ingress_enabled" {
-  description = "DEPRECATED: Use argocd_config.hostname instead (non-empty hostname enables ingress)"
-  type        = bool
-  default     = false
-}
-
-variable "ingress_host" {
-  description = "DEPRECATED: Use argocd_config.hostname instead"
-  type        = string
-  default     = "argocd.example.com"
-}
-
-variable "ingress_annotations" {
-  description = "DEPRECATED: Use argocd_config.values_yaml instead"
-  type        = map(string)
+variable "argocd_values" {
+  description = "Custom values for the ArgoCD Helm chart"
+  type        = map(any)
   default     = {}
-}
-
-variable "ingress_tls" {
-  description = "DEPRECATED: Use argocd_config.values_yaml for TLS configuration"
-  type = list(object({
-    hosts      = list(string)
-    secretName = string
-  }))
-  default = []
-}
-
-variable "ha_enabled" {
-  description = "DEPRECATED: Use argocd_config.redis_ha_enabled instead"
-  type        = bool
-  default     = false
-}
-
-variable "server_insecure" {
-  description = "DEPRECATED: Use argocd_config.values_yaml instead"
-  type        = bool
-  default     = true
-}
-
-variable "server_service_type" {
-  description = "DEPRECATED: Use argocd_config.values_yaml instead"
-  type        = string
-  default     = "ClusterIP"
-}
-
-variable "argocd_projects" {
-  description = "Map of ArgoCD projects to create"
-  type = map(object({
-    name         = string
-    description  = string
-    source_repos = list(string)
-    destinations = list(object({
-      server    = string
-      namespace = string
-    }))
-  }))
-  default = {}
-}
-
-variable "argocd_applications" {
-  description = "Map of ArgoCD applications to create"
-  type = map(object({
-    name            = string
-    project         = string
-    repo_url        = string
-    target_revision = string
-    path            = string
-    destination = object({
-      server    = string
-      namespace = string
-    })
-    sync_policy = optional(object({
-      automated = object({
-        prune       = bool
-        self_heal   = bool
-        allow_empty = bool
-      })
-      sync_options = list(string)
-    }))
-    helm_values = optional(object({
-      value_files = optional(list(string))
-      parameters = optional(list(object({
-        name  = string
-        value = string
-      })))
-      raw_values = optional(string)
-    }))
-  }))
-  default = {}
-}
-
-variable "environment" {
-  description = "Deployment environment (dev, staging, prod) - used for GitOps branch targeting"
-  type        = string
-  default     = "main"
-}
-
-variable "gitops_repo_url" {
-  description = "URL of the Git repository containing application configurations"
-  type        = string
-  default     = ""
-}
-
-variable "custom_helm_values" {
-  description = "Custom Helm values to be merged with the module's values"
-  type        = string
-  default     = ""
 }

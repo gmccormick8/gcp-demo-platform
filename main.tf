@@ -9,6 +9,7 @@ locals {
       pods_network_name     = "demo-east-pods"
       services_network_name = "demo-east-services"
       master_ipv4_cidr      = "172.16.0.0/28"
+      fw_tags               = []
     }
     central = {
       # GKE cluster config
@@ -30,6 +31,7 @@ locals {
       pods_network_name     = "demo-west-pods"
       services_network_name = "demo-west-services"
       master_ipv4_cidr      = "172.16.2.0/28"
+      fw_tags               = []
     }
   }
 }

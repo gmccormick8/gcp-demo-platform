@@ -76,3 +76,9 @@ variable "master_authorized_networks" {
   }))
   default = []
 }
+
+variable "node_pool_tags" {
+  description = "Tags to apply to the node pool"
+  type        = list(string)
+  default     = []
+}

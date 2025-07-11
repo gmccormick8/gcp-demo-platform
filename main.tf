@@ -19,6 +19,7 @@ locals {
       pods_network_name     = "demo-central-pods"
       services_network_name = "demo-central-services"
       master_ipv4_cidr      = "172.16.1.0/28"
+      node_pool_tags        = ["argocd-server"]
     }
     west = {
       # GKE cluster config
@@ -51,6 +52,7 @@ module "demo-vpc" {
           ports    = ["80", "443", "8080"]
         }
       ]
+      target_tags = ["argocd-server"]
     }
   }
 
@@ -114,6 +116,7 @@ module "gke_clusters" {
   machine_type               = "e2-small"
   disk_size_gb               = 25
   disk_type                  = "pd-standard"
+  node_pool_tags             = each.value.node_pool_tags
 
   depends_on = [
     module.demo-vpc
@@ -199,50 +202,4 @@ resource "terraform_data" "fleet_membership_cleanup" {
       sleep 90
     EOT
   }
-}
-
-module "argocd" {
-  source = "./modules/argocd"
-
-  project_id        = var.project_id
-  cluster_endpoint  = module.gke_clusters["central"].cluster_endpoint
-  cluster_ca_cert   = module.gke_clusters["central"].master_auth.cluster_ca_certificate
-  cluster_name = module.gke_clusters["central"].cluster_name
-  access_token      = data.google_client_config.default.access_token
-  argocd_namespace  = "argocd"
-  argocd_helm_repo  = "https://argoproj.github.io/argo-helm"
-  argocd_helm_chart = "argo-cd"
-  argocd_version    = "5.0.0"
-  argocd_values = {
-    global : {
-      server : {
-        extraArgs : ["--enable-cluster"]
-      }
-    }
-  }
-}
-
-module "argocd_applicationset" {
-  source = "./modules/argocd_applicationset"
-
-  project_id       = var.project_id
-  argocd_namespace = "argocd"
-  clusters = {
-    east = {
-      endpoint       = module.gke_clusters["east"].cluster_endpoint
-      ca_certificate = module.gke_clusters["east"].master_auth.cluster_ca_certificate
-    }
-    central = {
-      endpoint       = module.gke_clusters["central"].cluster_endpoint
-      ca_certificate = module.gke_clusters["central"].master_auth.cluster_ca_certificate
-    }
-    west = {
-      endpoint       = module.gke_clusters["west"].cluster_endpoint
-      ca_certificate = module.gke_clusters["west"].master_auth.cluster_ca_certificate
-    }
-  }
-  application_name = "demo-app"
-  repo_url         = var.gitops_repo_url
-  target_revision  = var.environment
-  path             = "applications/demo-app"
 }

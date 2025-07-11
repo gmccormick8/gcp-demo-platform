@@ -19,7 +19,7 @@ locals {
       pods_network_name     = "demo-central-pods"
       services_network_name = "demo-central-services"
       master_ipv4_cidr      = "172.16.1.0/28"
-      node_pool_tags        = ["argocd-server"]
+      fw_tags               = ["argocd-server"]
     }
     west = {
       # GKE cluster config
@@ -49,7 +49,7 @@ module "demo-vpc" {
       allow = [
         {
           protocol = "tcp"
-          ports    = ["80", "443", "8080"]
+          ports    = ["80", "443"]
         }
       ]
       target_tags = ["argocd-server"]
@@ -116,7 +116,7 @@ module "gke_clusters" {
   machine_type               = "e2-small"
   disk_size_gb               = 25
   disk_type                  = "pd-standard"
-  node_pool_tags             = each.value.node_pool_tags
+  fw_tags                    = each.value.fw_tags
 
   depends_on = [
     module.demo-vpc

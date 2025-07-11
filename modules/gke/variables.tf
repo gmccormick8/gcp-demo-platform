@@ -77,8 +77,8 @@ variable "master_authorized_networks" {
   default = []
 }
 
-variable "node_pool_tags" {
-  description = "Tags to apply to the node pool"
+variable "fw_tags" {
+  description = "Tags to apply to the firewall rules"
   type        = list(string)
   default     = []
 }

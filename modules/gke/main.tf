@@ -110,7 +110,7 @@ resource "google_container_node_pool" "primary_nodes" {
       enable_integrity_monitoring = true
     }
 
-    tags = var.node_pool_tags
+    tags = var.fw_tags
   }
 
   network_config {

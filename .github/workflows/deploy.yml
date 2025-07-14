@@ -141,9 +141,7 @@ jobs:
         id: read_plan_summary
         run: |
           PLAN_SUMMARY=$(cat plan_summary.md)
-          # Convert to JSON string and set as output
-          PLAN_SUMMARY_JSON=$(echo "$PLAN_SUMMARY" | jq -R -s '.')
-          echo "plan_summary=$PLAN_SUMMARY_JSON" >> $GITHUB_OUTPUT
+          echo "plan_summary=$PLAN_SUMMARY" >> $GITHUB_OUTPUT
 
       - name: Manual Approval
         uses: trstringer/manual-approval@v1
@@ -156,7 +154,7 @@ jobs:
             Please review this deployment to ${{ github.ref_name }}.
             
             ## Terraform Plan Summary
-            ${{ fromJson(steps.read_plan_summary.outputs.plan_summary) }}
+            ${{ steps.read_plan_summary.outputs.plan_summary }}
           fail-on-denial: true
 
 

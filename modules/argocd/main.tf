@@ -16,10 +16,10 @@ resource "helm_release" "argocd" {
 
   values = [
     <<EOT
-server:
-  service:
-    type: LoadBalancer
-EOT
+    server:
+      service:
+        type: LoadBalancer
+    EOT
   ]
 }
 

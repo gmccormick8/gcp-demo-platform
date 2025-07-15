@@ -55,7 +55,6 @@ jobs:
       - name: Terraform Init
         env:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
-          TF_VAR_argocd_secret_name: ${{ secrets.ARGOCD_SECRET_NAME }}
           TF_VAR_environment: ${{ github.ref_name }}
         run: |
           terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
@@ -64,7 +63,6 @@ jobs:
         id: plan
         env:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
-          TF_VAR_argocd_secret_name: ${{ secrets.ARGOCD_SECRET_NAME }}
           TF_VAR_environment: ${{ github.ref_name }}
           GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.gcp-auth.outputs.access_token }}
           TF_IN_AUTOMATION: "true"
@@ -196,7 +194,6 @@ jobs:
       - name: Terraform Init
         env:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
-          TF_VAR_argocd_secret_name: ${{ secrets.ARGOCD_SECRET_NAME }}
           TF_VAR_environment: ${{ github.ref_name }}
         run: |
           terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
@@ -214,7 +211,6 @@ jobs:
         if: ${{ needs.plan.outputs.has_changes == 'true' }}
         env:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
-          TF_VAR_argocd_secret_name: ${{ secrets.ARGOCD_SECRET_NAME }}
           TF_VAR_environment: ${{ github.ref_name }}
           GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.gcp-auth-apply.outputs.access_token }}
           TF_IN_AUTOMATION: "true"

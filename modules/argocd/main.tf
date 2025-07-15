@@ -7,9 +7,9 @@ data "google_container_cluster" "primary" {
 }
 
 module "argocd" {
-  source        = "squareops/argocd/kubernetes"
+  source = "squareops/argocd/kubernetes"
   argocd_config = {
-    hostname                   = "argocd.prod.in"
-    values_yaml                = ""
+    hostname    = "argocd.prod.in"
+    values_yaml = ""
   }
 }

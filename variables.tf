@@ -3,15 +3,6 @@ variable "project_id" {
   type        = string
 }
 
-variable "argocd_secret_name" {
-  description = "Name of the Secret Manager secret containing the plaintext ArgoCD admin password"
-  type        = string
-  validation {
-    condition     = length(var.argocd_secret_name) > 0
-    error_message = "The argocd_secret_name variable must be set to a valid Secret Manager secret name."
-  }
-}
-
 variable "environment" {
   description = "Deployment environment (dev, staging, prod) - used for GitOps branch targeting"
   type        = string

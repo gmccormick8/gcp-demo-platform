@@ -125,7 +125,6 @@ module "gke_clusters" {
   ]
 }
 
-
 # Configure GKE Hub and enable Multi-Cluster Services (MCS)
 resource "google_gke_hub_feature" "mcs" {
   name     = "multiclusterservicediscovery"
@@ -206,23 +205,3 @@ resource "terraform_data" "fleet_membership_cleanup" {
   }
 }
 
-module "argocd_central" {
-  source                 = "./modules/argocd"
-  cluster_endpoint       = module.gke_clusters["central"].cluster_endpoint
-  cluster_ca_certificate = module.gke_clusters["central"].master_auth.cluster_ca_certificate
-  access_token           = data.google_client_config.default.access_token
-}
-
-module "argocd_east" {
-  source                 = "./modules/argocd"
-  cluster_endpoint       = module.gke_clusters["east"].cluster_endpoint
-  cluster_ca_certificate = module.gke_clusters["east"].master_auth.cluster_ca_certificate
-  access_token           = data.google_client_config.default.access_token
-}
-
-module "argocd_west" {
-  source                 = "./modules/argocd"
-  cluster_endpoint       = module.gke_clusters["west"].cluster_endpoint
-  cluster_ca_certificate = module.gke_clusters["west"].master_auth.cluster_ca_certificate
-  access_token           = data.google_client_config.default.access_token
-}

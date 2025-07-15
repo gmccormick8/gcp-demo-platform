@@ -101,6 +101,24 @@ After a successful deployment, you can access ArgoCD using the following steps:
 - Environment-specific GitOps branches for configuration management
 - Intelligent approval process for infrastructure changes (see [Workflow Approvals](docs/workflow-approvals.md))
 
+## Deploying ArgoCD
+
+ArgoCD is deployed on all three clusters using the `terraform-helm-argocd` module. To configure the CI/CD user, set the `ci_cd_password` variable in your Terraform configuration.
+
+Example:
+
+```hcl
+variable "ci_cd_password" {
+  default = "SecurePassword123"
+}
+```
+
+Run the following command to deploy ArgoCD:
+
+```bash
+terraform apply
+```
+
 ## Contributing
 
 1. Create a feature branch

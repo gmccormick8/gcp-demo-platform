@@ -121,7 +121,7 @@ jobs:
           minimum-approvals: 1
           issue-title: 'Manual Approval for ${{ github.ref_name }} Deployment'
           issue-body: |
-            '${{ needs.plan.outputs.summary }}'
+            ${{ needs.plan.outputs.summary }}
           fail-on-denial: true
 
 

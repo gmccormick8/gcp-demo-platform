@@ -134,12 +134,6 @@ jobs:
         with:
           name: terraform-plan-summary
 
-      - name: Read Plan Summary
-        id: read_plan_summary
-        run: |
-          PLAN_SUMMARY=$(cat plan_summary.md | awk '{printf "%s ", $0}')
-          echo "plan_summary=$PLAN_SUMMARY" >> $GITHUB_OUTPUT
-
       - name: Manual Approval
         uses: trstringer/manual-approval@v1
         with:
@@ -151,7 +145,7 @@ jobs:
             Please review this deployment to ${{ github.ref_name }}.
             
             ## Terraform Plan Summary
-            ${{ steps.read_plan_summary.outputs.plan_summary }}
+            $(cat plan_summary.md)
           fail-on-denial: true
 
 

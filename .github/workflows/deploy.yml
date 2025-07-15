@@ -96,11 +96,17 @@ jobs:
           
       - name: Output Plan Summary
         id: plan_markdown
+        if: steps.check_changes.outputs.has_changes == 'true'
         uses: borchero/terraform-plan-comment@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           planfile: terraform-plan.tfplan
           skip-empty: true
+
+      - name: Debug Plan Markdown Output
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          echo "plan_markdown: ${{ steps.plan_markdown.outputs.markdown }}"
        
           
   manual-approval:

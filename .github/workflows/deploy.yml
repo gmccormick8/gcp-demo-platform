@@ -138,8 +138,9 @@ jobs:
       - name: Read Plan Summary
         id: read_plan_summary
         run: |
-          PLAN_SUMMARY=$(cat plan_summary.html)
-          echo "plan_summary=$PLAN_SUMMARY" >> $GITHUB_OUTPUT
+          echo "plan_summary <<EOF" >> $GITHUB_OUTPUT
+          cat plan_summary.html >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Manual Approval
         uses: trstringer/manual-approval@v1

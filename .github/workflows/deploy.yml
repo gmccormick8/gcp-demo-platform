@@ -65,7 +65,6 @@ jobs:
         run: |
           terraform plan -detailed-exitcode -out=terraform-plan.tfplan -input=false -no-color \
             -var="project_id=${{ secrets.PROJECT_ID }}" \
-            -var="argocd_secret_name=${{ secrets.ARGOCD_SECRET_NAME }}" \
             -var="environment=${{ github.ref_name }}" || echo "exitcode=$?" >> $GITHUB_OUTPUT
 
       - name: Check for Changes

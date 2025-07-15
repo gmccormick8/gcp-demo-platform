@@ -152,6 +152,7 @@ jobs:
           issue-body: |
             Please review this deployment to ${{ github.ref_name }}.
 
+            ## Terraform Plan Summary
             ${{ steps.read_plan_summary.outputs.plan_summary }}
           fail-on-denial: true
 

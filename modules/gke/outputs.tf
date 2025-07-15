@@ -18,7 +18,6 @@ output "master_auth" {
   value = {
     cluster_ca_certificate = google_container_cluster.primary.master_auth[0].cluster_ca_certificate
   }
-  sensitive = true
 }
 
 output "cluster_endpoint" {

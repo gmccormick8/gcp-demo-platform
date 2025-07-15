@@ -18,6 +18,7 @@ jobs:
 
     outputs:
       has_changes: ${{ steps.check_changes.outputs.has_changes }}
+      plan_summary: ${{ steps.plan_markdown.outputs.markdown }}
 
     steps:
       - name: Checkout code
@@ -100,24 +101,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           planfile: terraform-plan.tfplan
           skip-empty: true
-      
-      - name: Create Plan Summary File
-        id: create_plan_summary
-        if: steps.check_changes.outputs.has_changes == 'true'
-        run: |
-          cat << EOF > plan_summary.html
-          ${{ steps.plan_markdown.outputs.markdown }}
-          EOF
-
-      - name: Upload Plan Summary
-        id: upload_plan_markdown
-        if: steps.check_changes.outputs.has_changes == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-plan-summary
-          path: plan_summary.html
-          retention-days: 1
- 
+       
           
   manual-approval:
     needs: plan
@@ -129,18 +113,6 @@ jobs:
       pull-requests: write
 
     steps:      
-      - name: Download Terraform Plan Summary
-        id: download_plan_summary
-        uses: actions/download-artifact@v4
-        with:
-          name: terraform-plan-summary
-
-      - name: Read Plan Summary
-        id: read_plan_summary
-        run: |
-          PLAN_SUMMARY=$(cat plan_summary.html)
-          echo "plan_summary=$PLAN_SUMMARY" >> $GITHUB_OUTPUT
-
       - name: Manual Approval
         uses: trstringer/manual-approval@v1
         with:
@@ -152,7 +124,7 @@ jobs:
             Please review this deployment to ${{ github.ref_name }}.
 
             ## Terraform Plan Summary
-            ${{ steps.read_plan_summary.outputs.plan_summary }}
+            ${{ needs.plan.outputs.plan_summary }}
           fail-on-denial: true
 
 

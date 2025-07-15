@@ -137,7 +137,7 @@ jobs:
       - name: Read Plan Summary
         id: read_plan_summary
         run: |
-          PLAN_SUMMARY=$(cat plan_summary.md)
+          PLAN_SUMMARY=$(cat plan_summary.md | awk '{printf "%s ", $0}')
           echo "plan_summary=$PLAN_SUMMARY" >> $GITHUB_OUTPUT
 
       - name: Manual Approval

@@ -18,7 +18,7 @@ jobs:
 
     outputs:
       has_changes: ${{ steps.check_changes.outputs.has_changes }}
-      plan_summary: ${{ steps.plan_markdown.outputs.markdown }}
+      plan_summary: ${{ steps.plan_markdown.outputs.markdown || 'No changes or plan summary not available.' }}
 
     steps:
       - name: Checkout code
@@ -102,11 +102,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           planfile: terraform-plan.tfplan
           skip-empty: true
-
-      - name: Debug Plan Markdown Output
-        if: steps.check_changes.outputs.has_changes == 'true'
-        run: |
-          echo "plan_markdown: ${{ steps.plan_markdown.outputs.markdown }}"
        
           
   manual-approval:

@@ -113,6 +113,9 @@ jobs:
       pull-requests: write
 
     steps:      
+      - name: Debug Plan Summary Output
+        run: |
+          echo "Plan summary: ${{ needs.plan.outputs.plan_summary }}"
       - name: Manual Approval
         uses: trstringer/manual-approval@v1
         with:

@@ -211,5 +211,5 @@ module "argocd" {
   source   = "./modules/argocd"
 
   cluster_name     = each.value.cluster_name
-  cluster_location = each.value.region  
+  cluster_location = each.value.region
 }

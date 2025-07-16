@@ -107,7 +107,7 @@ jobs:
           skip-empty: true
 
 
-  manual-approval:
+  approval:
     needs: plan
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
@@ -169,14 +169,16 @@ jobs:
             Review this ${{ inputs.environment }} destroy plan carefully before proceeding!
             
             ${{ steps.get_plan_summary.outputs.markdown }}
+
+            End of Planned Changes
           fail-on-denial: true
 
 
   destroy:
-    needs: [plan, manual-approval]
+    needs: [plan, approval]
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    if: ${{ inputs.confirmation == inputs.environment && endsWith(github.ref_name, inputs.environment) && needs.plan.outputs.has_changes == 'true' && needs.manual-approval.result == 'success' }}
+    if: ${{ inputs.confirmation == inputs.environment && endsWith(github.ref_name, inputs.environment) && needs.plan.outputs.has_changes == 'true' && needs.approval.result == 'success' }}
     permissions:
       contents: 'read'
       id-token: 'write'

@@ -9,7 +9,7 @@ locals {
       pods_network_name     = "demo-east-pods"
       services_network_name = "demo-east-services"
       master_ipv4_cidr      = "172.16.0.0/28"
-      fw_tags               = []
+      fw_tags               = ["argocd-server"]
     }
     central = {
       # GKE cluster config
@@ -31,7 +31,7 @@ locals {
       pods_network_name     = "demo-west-pods"
       services_network_name = "demo-west-services"
       master_ipv4_cidr      = "172.16.2.0/28"
-      fw_tags               = []
+      fw_tags               = ["argocd-server"]
     }
   }
 }
@@ -210,6 +210,7 @@ module "argocd_central" {
   cluster_endpoint       = module.gke_clusters["central"].cluster_endpoint
   cluster_ca_certificate = module.gke_clusters["central"].master_auth.cluster_ca_certificate
   access_token           = data.google_client_config.default.access_token
+  region                 = local.clusters["central"].region
 }
 
 module "argocd_east" {
@@ -217,6 +218,7 @@ module "argocd_east" {
   cluster_endpoint       = module.gke_clusters["east"].cluster_endpoint
   cluster_ca_certificate = module.gke_clusters["east"].master_auth.cluster_ca_certificate
   access_token           = data.google_client_config.default.access_token
+  region                 = local.clusters["east"].region
 }
 
 module "argocd_west" {
@@ -224,4 +226,5 @@ module "argocd_west" {
   cluster_endpoint       = module.gke_clusters["west"].cluster_endpoint
   cluster_ca_certificate = module.gke_clusters["west"].master_auth.cluster_ca_certificate
   access_token           = data.google_client_config.default.access_token
+  region                 = local.clusters["west"].region
 }

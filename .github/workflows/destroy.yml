@@ -151,7 +151,7 @@ jobs:
           terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
 
       - name: Output Plan Summary
-        id: get_plan_summary
+        id: plan_summary
         uses: borchero/terraform-plan-comment@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -162,13 +162,13 @@ jobs:
         uses: trstringer/manual-approval@v1
         with:
           secret: ${{ secrets.GITHUB_TOKEN }}
-          approvers: ${{ secrets.APPROVERS}}
+          approvers: ${{ secrets.APPROVERS }}
           minimum-approvals: 1
           issue-title: 'Manual Approval for ${{ inputs.environment }} Destruction'
           issue-body: |
             Review this ${{ inputs.environment }} destroy plan carefully before proceeding!
             
-            ${{ steps.get_plan_summary.outputs.markdown }}
+            ${{ steps.plan_summary.outputs.markdown }}
 
             End of Planned Changes
           fail-on-denial: true

@@ -18,7 +18,7 @@ jobs:
 
     outputs:
       has_changes: ${{ steps.check_changes.outputs.has_changes }}
-      plan_summary: ${{ steps.plan_markdown.outputs.markdown || 'No changes or plan summary not available.' }}
+      plan_summary: ${{ steps.set_plan_summary.outputs.plan_summary }}
 
     steps:
       - name: Checkout code
@@ -102,7 +102,18 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           planfile: terraform-plan.tfplan
           skip-empty: true
-       
+
+      - name: Set Plan Summary Output
+        if: always()
+        id: set_plan_summary
+        run: |
+          if [ -n "${{ steps.plan_markdown.outputs.markdown }}" ]; then
+            echo "plan_summary<<EOF" >> $GITHUB_OUTPUT
+            echo "${{ steps.plan_markdown.outputs.markdown }}" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "plan_summary=No changes or plan summary not available." >> $GITHUB_OUTPUT
+          fi
           
   manual-approval:
     needs: plan

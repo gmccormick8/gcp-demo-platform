@@ -115,11 +115,40 @@ jobs:
     permissions:
       issues: write
       pull-requests: write
+      id-token: 'write'
+
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   
+
       - name: Download Terraform Plan
         uses: actions/download-artifact@v4
         with:
           name: terraform-plan
+
+      - name: Authenticate to GCP
+        id: gcp-auth-apply
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ secrets.PROJECT_ID }}
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.TERRAFORM_SA_EMAIL }}
+          token_format: "access_token"
+          create_credentials_file: true
+      
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.12.0'
+
+      - name: Terraform Init
+        env:
+          TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
+          TF_VAR_environment: ${{ github.ref_name }}
+        run: |
+          terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
 
       - name: Output Plan Summary
         id: get_plan_summary

@@ -113,7 +113,7 @@ module "gke_clusters" {
   services_network_name      = each.value.services_network_name
   master_ipv4_cidr_block     = each.value.master_ipv4_cidr
   min_node_count             = 1
-  master_authorized_networks = "0.0.0.0/0"
+  master_authorized_networks = ["0.0.0.0/0"]
   max_node_count             = 3
   machine_type               = "e2-small"
   disk_size_gb               = 25

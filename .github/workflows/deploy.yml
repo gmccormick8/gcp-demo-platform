@@ -113,6 +113,11 @@ jobs:
       pull-requests: write
 
     steps:      
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.12.0'
+
       - name: Download Terraform Plan
         uses: actions/download-artifact@v4
         with:

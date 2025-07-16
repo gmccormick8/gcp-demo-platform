@@ -3,15 +3,42 @@ resource "google_compute_address" "argocd_ip" {
   region = var.region
 }
 
-module "argocd" {
-  source = "squareops/argocd/kubernetes"
-  argocd_config = {
-    hostname                     = google_compute_address.argocd_ip.address
-    values_yaml                  = file("${path.module}/helm/values.yaml")
-    argocd_notifications_enabled = false
-    autoscaling_enabled          = false
-    ingress_class_name           = "nginx"
-    redis_ha_enabled             = false
-    slack_notification_token     = ""
+resource "helm_release" "argocd" {
+  name       = "argocd"
+  namespace  = "argocd"
+  repository = "https://argoproj.github.io/argo-helm"
+  chart      = "argo-cd"
+  version    = "8.1.0"
+
+  create_namespace = true
+
+  values = [
+    file("${path.module}/helm/values.yaml")
+  ]
+
+  set {
+    name  = "server.ingress.enabled"
+    value = "true"
   }
+
+  set {
+    name  = "server.ingress.ingressClassName"
+    value = "nginx"
+  }
+
+  set {
+    name  = "server.ingress.annotations.\"kubernetes.io/ingress.global-static-ip-name\""
+    value = google_compute_address.argocd_ip.name
+  }
+
+  set {
+    name  = "server.ingress.annotations.\"kubernetes.io/ingress.allow-http\""
+    value = "true"
+  }
+
+  set {
+    name  = "server.ingress.ip"
+    value = google_compute_address.argocd_ip.address
+  }
+
 }

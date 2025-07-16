@@ -1,4 +1,4 @@
-output "argocd_credentials" {
-  value       = module.argocd.argocd
-  description = "Argocd_Info"
+output "argocd_release" {
+  value       = helm_release.argocd
+  description = "ArgoCD Helm release info"
 }

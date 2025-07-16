@@ -99,28 +99,12 @@ jobs:
           
       - name: Output Plan Summary
         id: plan_markdown
+        if: steps.check_changes.outputs.has_changes == 'true'
         uses: borchero/terraform-plan-comment@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           planfile: terraform-plan.tfplan
-          skip-empty: true      
-          
-      - name: Create Plan Summary File
-        id: create_plan_summary
-        if: steps.check_changes.outputs.has_changes == 'true'
-        run: |
-          cat << EOF > plan_summary.md
-          ${{ steps.plan_markdown.outputs.markdown }}
-          EOF
-
-      - name: Upload Plan Summary
-        id: upload_plan_markdown
-        if: steps.check_changes.outputs.has_changes == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-plan-summary
-          path: plan_summary.md
-          retention-days: 1
+          skip-empty: true
 
 
   manual-approval:
@@ -132,18 +116,18 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      - name: Download Terraform Plan Summary
+      - name: Download Terraform Plan
         uses: actions/download-artifact@v4
         with:
-          name: terraform-plan-summary
+          name: terraform-plan
 
-      - name: Read Plan Summary
-        id: read_plan_summary
-        run: |
-          PLAN_SUMMARY=$(cat plan_summary.md)
-          # Convert to JSON string and set as output
-          PLAN_SUMMARY_JSON=$(echo "$PLAN_SUMMARY" | jq -R -s '.')
-          echo "plan_summary=$PLAN_SUMMARY_JSON" >> $GITHUB_OUTPUT
+      - name: Output Plan Summary
+        id: get_plan_summary
+        uses: borchero/terraform-plan-comment@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          planfile: terraform-plan.tfplan
+          skip-empty: true
 
       - name: Manual Approval
         uses: trstringer/manual-approval@v1
@@ -156,7 +140,7 @@ jobs:
             Review this ${{ inputs.environment }} destroy plan carefully before proceeding!
             
             ## Terraform Plan Summary
-            ${{ fromJson(steps.read_plan_summary.outputs.plan_summary) }}
+            ${{ steps.get_plan_summary.outputs.markdown }}
           fail-on-denial: true
 
 

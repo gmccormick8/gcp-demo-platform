@@ -168,7 +168,7 @@ jobs:
           issue-body: |
             Review this ${{ inputs.environment }} destroy plan carefully before proceeding!
             
-            ${{ steps.plan_summary.outputs.markdown }}
+            #${{ steps.plan_summary.outputs.markdown }}
 
             End of Planned Changes
           fail-on-denial: true
@@ -228,4 +228,3 @@ jobs:
           GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.gcp-auth-apply.outputs.access_token }}
           TF_IN_AUTOMATION: "true"
         run: terraform apply -auto-approve terraform-plan.tfplan
-        

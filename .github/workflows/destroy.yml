@@ -139,7 +139,6 @@ jobs:
           issue-body: |
             Review this ${{ inputs.environment }} destroy plan carefully before proceeding!
             
-            ## Terraform Plan Summary
             ${{ steps.get_plan_summary.outputs.markdown }}
           fail-on-denial: true
 

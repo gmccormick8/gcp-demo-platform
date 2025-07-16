@@ -14,17 +14,3 @@ variable "gitops_repo_url" {
   type        = string
   default     = "https://github.com/gmccormick8/gcp-demo-app.git"
 }
-
-variable "master_authorized_networks" {
-  description = "List of CIDR blocks that are allowed to access the master's API endpoint"
-  type = list(object({
-    cidr_block   = string
-    display_name = string
-  }))
-  default = [
-    {
-      cidr_block   = "0.0.0.0/0"
-      display_name = "All IPs - For GitHub Actions"
-    }
-  ]
-}

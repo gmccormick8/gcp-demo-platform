@@ -206,19 +206,19 @@ resource "terraform_data" "fleet_membership_cleanup" {
 }
 
 module "argo_east" {
-  source  = "./modules/argocd"
+  source           = "./modules/argocd"
   cluster_location = locals.clusters["east"].region
-  cluster_name = locals.clusters["east"].cluster_name
+  cluster_name     = locals.clusters["east"].cluster_name
 }
 
 module "argo_central" {
-  source  = "./modules/argocd"
+  source           = "./modules/argocd"
   cluster_location = locals.clusters["central"].region
-  cluster_name = locals.clusters["central"].cluster_name
+  cluster_name     = locals.clusters["central"].cluster_name
 }
 
 module "argo_west" {
-  source  = "./modules/argocd"
+  source           = "./modules/argocd"
   cluster_location = locals.clusters["west"].region
-  cluster_name = locals.clusters["west"].cluster_name
+  cluster_name     = locals.clusters["west"].cluster_name
 }

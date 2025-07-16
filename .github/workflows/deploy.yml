@@ -93,6 +93,14 @@ jobs:
             terraform-plan.tfplan
           retention-days: 1
 
+      - name: Output Plan Summary
+        id: get_plan_summary
+        uses: borchero/terraform-plan-comment@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          planfile: terraform-plan.tfplan
+          skip-empty: true
+
           
   approval:
     needs: plan
@@ -138,12 +146,20 @@ jobs:
           terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
 
       - name: Output Plan Summary
-        id: get_plan_summary
+        id: plan_summary
         uses: borchero/terraform-plan-comment@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           planfile: terraform-plan.tfplan
           skip-empty: true
+
+      - name: Mask Duplicate Plan Summary
+        run: |
+          echo "::add-mask::${{ steps.plan_summary.outputs.markdown }}"
+          # Redact plan summary from GITHUB_STEP_SUMMARY if present
+          if [ -f "$GITHUB_STEP_SUMMARY" ]; then
+            sed -i "s|${{ steps.plan_summary.outputs.markdown }}|***|g" "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Manual Approval
         uses: trstringer/manual-approval@v1
@@ -155,8 +171,9 @@ jobs:
           issue-body: |
             Please review this deployment to ${{ github.ref_name }}.
 
-            ${{ steps.get_plan_summary.outputs.markdown }}
-            #Plan End
+            ${{ steps.plan_summary.outputs.markdown }}
+            
+            End of Planned Changes
           fail-on-denial: true
 
 

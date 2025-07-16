@@ -153,14 +153,6 @@ jobs:
           planfile: terraform-plan.tfplan
           skip-empty: true
 
-      - name: Mask Duplicate Plan Summary
-        run: |
-          echo "::add-mask::${{ steps.plan_summary.outputs.markdown }}"
-          # Redact plan summary from GITHUB_STEP_SUMMARY if present
-          if [ -f "$GITHUB_STEP_SUMMARY" ]; then
-            sed -i "s|${{ steps.plan_summary.outputs.markdown }}|***|g" "$GITHUB_STEP_SUMMARY"
-          fi
-
       - name: Manual Approval
         uses: trstringer/manual-approval@v1
         with:

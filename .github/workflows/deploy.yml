@@ -112,17 +112,7 @@ jobs:
       issues: write
       pull-requests: write
 
-    steps:      
-      - name: Authenticate to Google Cloud
-        id: gcp-auth
-        uses: google-github-actions/auth@v2
-        with:
-          project_id: ${{ secrets.PROJECT_ID }}
-          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.TERRAFORM_SA_EMAIL }}
-          token_format: "access_token"
-          create_credentials_file: true
-          
+    steps:              
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:

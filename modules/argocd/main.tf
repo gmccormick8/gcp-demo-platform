@@ -1,9 +1,3 @@
-resource "kubernetes_namespace_v1" "argocd" {
-  metadata {
-    name = "argocd"
-  }
-}
-
 module "argocd" {
   source = "squareops/argocd/kubernetes"
   argocd_config = {

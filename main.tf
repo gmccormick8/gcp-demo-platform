@@ -205,23 +205,23 @@ resource "terraform_data" "fleet_membership_cleanup" {
   }
 }
 
-module "argocd-east" {
-  source = "./modules/argocd"
-
-  cluster_name     = local.clusters["east"].cluster_name
-  cluster_location = local.clusters["east"].region
+module "argocd_central" {
+  source                 = "./modules/argocd"
+  cluster_endpoint       = module.gke_clusters["central"].cluster_endpoint
+  cluster_ca_certificate = module.gke_clusters["central"].master_auth.cluster_ca_certificate
+  access_token           = data.google_client_config.default.access_token
 }
 
-module "argocd-central" {
-  source = "./modules/argocd"
-
-  cluster_name     = local.clusters["central"].cluster_name
-  cluster_location = local.clusters["central"].region
+module "argocd_east" {
+  source                 = "./modules/argocd"
+  cluster_endpoint       = module.gke_clusters["east"].cluster_endpoint
+  cluster_ca_certificate = module.gke_clusters["east"].master_auth.cluster_ca_certificate
+  access_token           = data.google_client_config.default.access_token
 }
 
-module "argocd-west" {
-  source = "./modules/argocd"
-
-  cluster_name     = local.clusters["west"].cluster_name
-  cluster_location = local.clusters["west"].region
+module "argocd_west" {
+  source                 = "./modules/argocd"
+  cluster_endpoint       = module.gke_clusters["west"].cluster_endpoint
+  cluster_ca_certificate = module.gke_clusters["west"].master_auth.cluster_ca_certificate
+  access_token           = data.google_client_config.default.access_token
 }

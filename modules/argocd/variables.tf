@@ -1,9 +1,14 @@
-variable "cluster_name" {
-  description = "The name of the cluster where ArgoCD will be deployed"
+variable "cluster_endpoint" {
+  description = "The endpoint of the Kubernetes cluster"
   type        = string
 }
 
-variable "cluster_location" {
-  description = "The location of the cluster"
+variable "cluster_ca_certificate" {
+  description = "The cluster CA certificate"
+  type        = string
+}
+
+variable "access_token" {
+  description = "The access token for the Kubernetes cluster"
   type        = string
 }

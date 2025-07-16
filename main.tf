@@ -205,3 +205,20 @@ resource "terraform_data" "fleet_membership_cleanup" {
   }
 }
 
+module "argo_east" {
+  source  = "./modules/argo"
+  region  = locals.clusters["east"].region
+  project = var.project_id
+}
+
+module "argo_central" {
+  source  = "./modules/argo"
+  region  = locals.clusters["central"].region
+  project = var.project_id
+}
+
+module "argo_west" {
+  source  = "./modules/argo"
+  region  = locals.clusters["west"].region
+  project = var.project_id
+}

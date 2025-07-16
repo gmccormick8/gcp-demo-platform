@@ -9,5 +9,4 @@ module "argocd" {
     redis_ha_enabled             = false
     slack_notification_token     = ""
   }
-  namespace = kubernetes_namespace_v1.argocd.metadata[0].name
 }

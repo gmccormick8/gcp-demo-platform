@@ -168,8 +168,6 @@ jobs:
           issue-body: |
             Review this ${{ inputs.environment }} destroy plan carefully before proceeding!
             
-            #${{ steps.plan_summary.outputs.markdown }}
-
             End of Planned Changes
           fail-on-denial: true
 

@@ -52,6 +52,12 @@ jobs:
         run: |
           terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
 
+      - name: modify state
+        run: |
+          terraform state rm 'module.argocd_west.module.argocd.kubernetes_namespace.argocd'
+          terraform state rm 'module.argocd_central.module.argocd.kubernetes_namespace.argocd'
+          terraform state rm 'module.argocd_east.module.argocd.kubernetes_namespace.argocd'
+
       - name: Terraform Validate
         run: terraform validate
 

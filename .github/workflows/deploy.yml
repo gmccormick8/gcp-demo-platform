@@ -18,7 +18,6 @@ jobs:
 
     outputs:
       has_changes: ${{ steps.check_changes.outputs.has_changes }}
-      plan_summary: ${{ steps.set_plan_summary.outputs.plan_summary }}
 
     steps:
       - name: Checkout code
@@ -103,17 +102,6 @@ jobs:
           planfile: terraform-plan.tfplan
           skip-empty: true
 
-      - name: Set Plan Summary Output
-        if: always()
-        id: set_plan_summary
-        run: |
-          if [ -n "${{ steps.plan_markdown.outputs.markdown }}" ]; then
-            echo "plan_summary<<EOF" >> $GITHUB_OUTPUT
-            echo "${{ steps.plan_markdown.outputs.markdown }}" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-          else
-            echo "plan_summary=No changes or plan summary not available." >> $GITHUB_OUTPUT
-          fi
           
   manual-approval:
     needs: plan
@@ -125,9 +113,19 @@ jobs:
       pull-requests: write
 
     steps:      
-      - name: Debug Plan Summary Output
-        run: |
-          echo "Plan summary: ${{ needs.plan.outputs.plan_summary }}"
+      - name: Download Terraform Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan
+
+      - name: Output Plan Summary
+        id: get_plan_summary
+        uses: borchero/terraform-plan-comment@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          planfile: terraform-plan.tfplan
+          skip-empty: true
+
       - name: Manual Approval
         uses: trstringer/manual-approval@v1
         with:
@@ -139,7 +137,7 @@ jobs:
             Please review this deployment to ${{ github.ref_name }}.
 
             ## Terraform Plan Summary
-            ${{ needs.plan.outputs.plan_summary }}
+            ${{ steps.get_plan_summary.outputs.markdown }}
           fail-on-denial: true
 
 

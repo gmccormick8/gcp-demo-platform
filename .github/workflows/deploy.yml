@@ -92,18 +92,9 @@ jobs:
           path: |
             terraform-plan.tfplan
           retention-days: 1
-          
-      - name: Output Plan Summary
-        id: plan_markdown
-        if: steps.check_changes.outputs.has_changes == 'true'
-        uses: borchero/terraform-plan-comment@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          planfile: terraform-plan.tfplan
-          skip-empty: true
 
           
-  manual-approval:
+  approval:
     needs: plan
     if: ${{ needs.plan.outputs.has_changes == 'true' }}
     runs-on: ubuntu-latest
@@ -165,12 +156,13 @@ jobs:
             Please review this deployment to ${{ github.ref_name }}.
 
             ${{ steps.get_plan_summary.outputs.markdown }}
+            #Plan End
           fail-on-denial: true
 
 
   apply:
-    needs: [plan, manual-approval]
-    if: ${{ needs.plan.outputs.has_changes == 'true' && needs.manual-approval.result == 'success' }}
+    needs: [plan, approval]
+    if: ${{ needs.plan.outputs.has_changes == 'true' && needs.approval.result == 'success' }}
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name }}
     

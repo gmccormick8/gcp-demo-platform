@@ -32,3 +32,8 @@ variable "k8s_sa_name" {
   description = "Kubernetes Service Account name for ArgoCD"
   type        = string
 }
+
+variable "namespace" {
+  description = "Kubernetes namespace where ArgoCD will be installed"
+  type        = string  
+}

@@ -88,8 +88,8 @@ resource "kubernetes_manifest" "argocd_applicationset" {
           "list" = {
             "elements" = [
               {
-                "cluster" = "in-cluster"
-                "name"    = "demo-app"
+                "name"      = "mario"
+                "namespace" = "mario"
               }
             ]
           }
@@ -97,18 +97,21 @@ resource "kubernetes_manifest" "argocd_applicationset" {
       ]
       "template" = {
         "metadata" = {
-          "name" = "demo-app"
+          "name" = "mario"
         }
         "spec" = {
           "project" = "default"
           "source" = {
             "repoURL"        = "https://github.com/gmccormick8/gcp-demo-app.git"
             "targetRevision" = "HEAD"
-            "path"           = "."
+            "path"           = "helm/mario"
+            "helm" = {
+              "valueFiles" = []
+            }
           }
           "destination" = {
             "server"    = "https://kubernetes.default.svc"
-            "namespace" = var.namespace
+            "namespace" = "mario"
           }
           "syncPolicy" = {
             "automated" = {
@@ -116,6 +119,15 @@ resource "kubernetes_manifest" "argocd_applicationset" {
               "selfHeal" = true
             }
           }
+          "ignoreDifferences" = [
+            {
+              "group" = "apps"
+              "kind"  = "Deployment"
+              "jsonPointers" = [
+                "/spec/replicas"
+              ]
+            }
+          ]
         }
       }
     }

@@ -11,6 +11,13 @@ resource "google_service_account" "argocd" {
 }
 
 # Kubernetes Service Account for ArgoCD, annotated for GCP Workload Identity
+# Ensure the argocd namespace exists before creating resources in it
+resource "kubernetes_namespace" "argocd" {
+  metadata {
+    name = "argocd"
+  }
+}
+
 resource "kubernetes_service_account" "argocd" {
   metadata {
     name      = var.k8s_sa_name
@@ -19,6 +26,7 @@ resource "kubernetes_service_account" "argocd" {
       "iam.gke.io/gcp-service-account" = google_service_account.argocd.email
     }
   }
+  depends_on = [kubernetes_namespace.argocd]
   automount_service_account_token = true
 }
 

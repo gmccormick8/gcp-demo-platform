@@ -190,7 +190,7 @@ resource "kubernetes_namespace" "argocd" {
     name = "argocd"
   }
 
-  depends_on = [ google_gke_hub_feature.mci, google_gke_hub_feature.mcs ]
+  depends_on = [google_gke_hub_feature.mci, google_gke_hub_feature.mcs]
 }
 
 module "argocd_central" {

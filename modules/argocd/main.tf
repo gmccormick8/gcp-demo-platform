@@ -12,10 +12,6 @@ resource "helm_release" "argocd" {
 
   create_namespace = true
 
-  values = [
-    file("${path.module}/helm/values.yaml")
-  ]
-
   set {
     name  = "server.ingress.enabled"
     value = "true"

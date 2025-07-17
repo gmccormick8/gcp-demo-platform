@@ -189,6 +189,8 @@ resource "kubernetes_namespace" "argocd" {
   metadata {
     name = "argocd"
   }
+
+  depends_on = [ google_gke_hub_feature.mci, google_gke_hub_feature.mcs ]
 }
 
 module "argocd_central" {

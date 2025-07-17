@@ -155,7 +155,7 @@ jobs:
 
       - name: Save Plan Summary Markdown to File
         run: |
-          echo ${{ steps.plan_summary.outputs.markdown }} >> plan-summary.md
+          echo "${{ steps.plan_summary.outputs.markdown }}" >> plan-summary.md
 
       - name: Manual Approval
         uses: trstringer/manual-approval@v1

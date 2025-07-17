@@ -211,4 +211,13 @@ module "argocd_central" {
   gcp_sa_name            = "argocd-central-gcp-sa"
   k8s_sa_name            = "argocd-central-k8s-sa"
   namespace              = kubernetes_namespace.argocd.metadata[0].name
+
+  # Pass east and west cluster info for registration
+  east_cluster_endpoint       = module.gke_clusters["east"].cluster_endpoint
+  east_cluster_ca_certificate = module.gke_clusters["east"].master_auth.cluster_ca_certificate
+  east_access_token           = data.google_client_config.default.access_token
+
+  west_cluster_endpoint       = module.gke_clusters["west"].cluster_endpoint
+  west_cluster_ca_certificate = module.gke_clusters["west"].master_auth.cluster_ca_certificate
+  west_access_token           = data.google_client_config.default.access_token
 }

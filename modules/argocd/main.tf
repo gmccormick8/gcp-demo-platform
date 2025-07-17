@@ -20,8 +20,6 @@ resource "google_service_account_iam_binding" "workload_identity_binding" {
   members            = ["serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/${kubernetes_service_account.argocd_k8s.metadata[0].name}]"]
 }
 
-
-# Install ArgoCD using the official Helm chart
 resource "helm_release" "argocd" {
   name       = "argocd"
   repository = "https://argoproj.github.io/argo-helm"
@@ -72,8 +70,50 @@ resource "helm_release" "argocd" {
   ]
 }
 
+resource "kubernetes_secret" "argocd_east_cluster" {
+  metadata {
+    name      = "argocd-cluster-east"
+    namespace = var.namespace
+    labels = {
+      "argocd.argoproj.io/secret-type" = "cluster"
+    }
+  }
+  data = {
+    name   = "east"
+    server = var.east_cluster_endpoint
+    config = jsonencode({
+      bearerToken = var.east_access_token
+      tlsClientConfig = {
+        insecure = false
+        caData   = var.east_cluster_ca_certificate
+      }
+    })
+  }
+  depends_on = [helm_release.argocd]
+}
 
-# Deploy an ApplicationSet to ArgoCD for a public Git repo
+resource "kubernetes_secret" "argocd_west_cluster" {
+  metadata {
+    name      = "argocd-cluster-west"
+    namespace = var.namespace
+    labels = {
+      "argocd.argoproj.io/secret-type" = "cluster"
+    }
+  }
+  data = {
+    name   = "west"
+    server = var.west_cluster_endpoint
+    config = jsonencode({
+      bearerToken = var.west_access_token
+      tlsClientConfig = {
+        insecure = false
+        caData   = var.west_cluster_ca_certificate
+      }
+    })
+  }
+  depends_on = [helm_release.argocd]
+}
+
 resource "kubernetes_manifest" "argocd_applicationset" {
   manifest = {
     "apiVersion" = "argoproj.io/v1alpha1"

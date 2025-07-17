@@ -153,6 +153,13 @@ jobs:
           planfile: terraform-plan.tfplan
           skip-empty: true
 
+      - name: Save Plan Summary Markdown to File
+        run: |
+          echo "Please review this deployment to ${{ github.ref_name }}." > plan-summary.md
+          echo "" >> plan-summary.md
+          echo "${{ steps.plan_summary.outputs.markdown }}" >> plan-summary.md
+          echo "" >> plan-summary.md
+
       - name: Manual Approval
         uses: trstringer/manual-approval@v1
         with:
@@ -160,12 +167,7 @@ jobs:
           approvers: ${{ secrets.APPROVERS }}
           minimum-approvals: 1
           issue-title: 'Manual Approval for ${{ github.ref_name }} Deployment'
-          issue-body: |
-            Please review this deployment to ${{ github.ref_name }}.
-
-            ${{ steps.plan_summary.outputs.markdown }}
-            
-            End of Planned Changes
+          issue-body-file-path: plan-summary.md
           fail-on-denial: true
 
 

@@ -204,3 +204,11 @@ module "argocd_central" {
   k8s_sa_name            = "argocd-central-k8s-sa"
   namespace              = kubernetes_namespace.argocd.metadata[0].name
 }
+
+resource "kubernetes_namespace" "mario" {
+  metadata {
+    name = "mario"
+  }
+
+  depends_on = [argocd_central]
+}

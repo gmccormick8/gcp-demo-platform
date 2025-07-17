@@ -24,7 +24,7 @@ resource "kubernetes_service_account" "argocd_k8s" {
 resource "google_service_account_iam_binding" "workload_identity_binding" {
   service_account_id = google_service_account.argocd_gcp_sa.name
   role               = "roles/iam.workloadIdentityUser"
-  members            = ["serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.argocd.metadata["name"]}/${kubernetes_service_account.argocd_k8s.metadata["name"]}]"]
+  members            = ["serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.argocd.metadata[0].name}/${kubernetes_service_account.argocd_k8s.metadata[0].name}]"]
 
 }
 
@@ -42,25 +42,25 @@ resource "helm_release" "argocd" {
       server : {
         serviceAccount : {
           create = false
-          name   = kubernetes_service_account.argocd_k8s.metadata["name"]
+          name   = kubernetes_service_account.argocd_k8s.metadata[0].name
         }
       }
       controller : {
         serviceAccount : {
           create = false
-          name   = kubernetes_service_account.argocd_k8s.metadata["name"]
+          name   = kubernetes_service_account.argocd_k8s.metadata[0].name
         }
       }
       repoServer : {
         serviceAccount : {
           create = false
-          name   = kubernetes_service_account.argocd_k8s.metadata["name"]
+          name   = kubernetes_service_account.argocd_k8s.metadata[0].name
         }
       }
       applicationSet : {
         serviceAccount : {
           create = false
-          name   = kubernetes_service_account.argocd_k8s.metadata["name"]
+          name   = kubernetes_service_account.argocd_k8s.metadata[0].name
         }
       }
     })

@@ -26,7 +26,7 @@ resource "kubernetes_service_account" "argocd" {
       "iam.gke.io/gcp-service-account" = google_service_account.argocd.email
     }
   }
-  depends_on = [kubernetes_namespace.argocd]
+  depends_on                      = [kubernetes_namespace.argocd]
   automount_service_account_token = true
 }
 

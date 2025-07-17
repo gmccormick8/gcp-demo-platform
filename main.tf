@@ -195,3 +195,25 @@ module "argocd_central" {
   gcp_sa_name            = "argocd-central-gcp-sa"
   k8s_sa_name            = "argocd-central-k8s-sa"
 }
+
+module "argocd_west" {
+  source                 = "./modules/argocd"
+  cluster_endpoint       = module.gke_clusters["west"].cluster_endpoint
+  cluster_ca_certificate = module.gke_clusters["west"].master_auth.cluster_ca_certificate
+  access_token           = data.google_client_config.default.access_token
+  region                 = local.clusters["west"].region
+  project_id             = var.project_id
+  gcp_sa_name            = "argocd-west-gcp-sa"
+  k8s_sa_name            = "argocd-west-k8s-sa"
+}
+
+module "argocd_east" {
+  source                 = "./modules/argocd"
+  cluster_endpoint       = module.gke_clusters["east"].cluster_endpoint
+  cluster_ca_certificate = module.gke_clusters["east"].master_auth.cluster_ca_certificate
+  access_token           = data.google_client_config.default.access_token
+  region                 = local.clusters["east"].region
+  project_id             = var.project_id
+  gcp_sa_name            = "argocd-east-gcp-sa"
+  k8s_sa_name            = "argocd-east-k8s-sa"
+}

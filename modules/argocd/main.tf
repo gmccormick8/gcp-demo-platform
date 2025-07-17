@@ -44,6 +44,15 @@ resource "helm_release" "argocd" {
           create = false
           name   = kubernetes_service_account.argocd_k8s.metadata[0].name
         }
+        service : {
+          type = "LoadBalancer"
+          ports = {
+            http = 80
+          }
+        }
+        ingress : {
+          enabled = false
+        }
       }
       controller : {
         serviceAccount : {

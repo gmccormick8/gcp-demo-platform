@@ -109,8 +109,6 @@ resource "google_container_node_pool" "primary_nodes" {
       enable_secure_boot          = true
       enable_integrity_monitoring = true
     }
-
-    tags = var.fw_tags
   }
 
   network_config {

@@ -9,7 +9,6 @@ locals {
       pods_network_name     = "demo-east-pods"
       services_network_name = "demo-east-services"
       master_ipv4_cidr      = "172.16.0.0/28"
-      fw_tags               = ["argocd-server"]
     }
     central = {
       # GKE cluster config
@@ -20,7 +19,6 @@ locals {
       pods_network_name     = "demo-central-pods"
       services_network_name = "demo-central-services"
       master_ipv4_cidr      = "172.16.1.0/28"
-      fw_tags               = ["argocd-server"]
     }
     west = {
       # GKE cluster config
@@ -31,7 +29,6 @@ locals {
       pods_network_name     = "demo-west-pods"
       services_network_name = "demo-west-services"
       master_ipv4_cidr      = "172.16.2.0/28"
-      fw_tags               = ["argocd-server"]
     }
   }
 }
@@ -41,22 +38,6 @@ module "demo-vpc" {
   source       = "./modules/network"
   project_id   = var.project_id
   network_name = "demo"
-
-  # Add firewall rule for ArgoCD
-  firewall_rules = {
-    "allow-argocd-external" = {
-      direction     = "INGRESS"
-      priority      = 1000
-      source_ranges = ["0.0.0.0/0"]
-      allow = [
-        {
-          protocol = "tcp"
-          ports    = ["80", "443"]
-        }
-      ]
-      target_tags = ["argocd-server"]
-    }
-  }
 
   subnets = {
     "demo-east-vpc" = {
@@ -118,7 +99,6 @@ module "gke_clusters" {
   machine_type               = "e2-small"
   disk_size_gb               = 25
   disk_type                  = "pd-standard"
-  fw_tags                    = each.value.fw_tags
 
   depends_on = [
     module.demo-vpc
@@ -214,26 +194,4 @@ module "argocd_central" {
   project_id             = var.project_id
   gcp_sa_name            = "argocd-central-gcp-sa"
   k8s_sa_name            = "argocd-central-k8s-sa"
-}
-
-module "argocd_east" {
-  source                 = "./modules/argocd"
-  cluster_endpoint       = module.gke_clusters["east"].cluster_endpoint
-  cluster_ca_certificate = module.gke_clusters["east"].master_auth.cluster_ca_certificate
-  access_token           = data.google_client_config.default.access_token
-  region                 = local.clusters["east"].region
-  project_id             = var.project_id
-  gcp_sa_name            = "argocd-east-gcp-sa"
-  k8s_sa_name            = "argocd-east-k8s-sa"
-}
-
-module "argocd_west" {
-  source                 = "./modules/argocd"
-  cluster_endpoint       = module.gke_clusters["west"].cluster_endpoint
-  cluster_ca_certificate = module.gke_clusters["west"].master_auth.cluster_ca_certificate
-  access_token           = data.google_client_config.default.access_token
-  region                 = local.clusters["west"].region
-  project_id             = var.project_id
-  gcp_sa_name            = "argocd-west-gcp-sa"
-  k8s_sa_name            = "argocd-west-k8s-sa"
 }

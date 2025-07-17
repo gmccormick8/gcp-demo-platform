@@ -193,6 +193,14 @@ resource "kubernetes_namespace" "argocd" {
   depends_on = [google_gke_hub_feature.mci, google_gke_hub_feature.mcs]
 }
 
+resource "kubernetes_namespace" "mario" {
+  metadata {
+    name = "mario"
+  }
+
+  depends_on = [kubernetes_namespace.argocd]
+}
+
 module "argocd_central" {
   source                 = "./modules/argocd"
   cluster_endpoint       = module.gke_clusters["central"].cluster_endpoint
@@ -203,12 +211,4 @@ module "argocd_central" {
   gcp_sa_name            = "argocd-central-gcp-sa"
   k8s_sa_name            = "argocd-central-k8s-sa"
   namespace              = kubernetes_namespace.argocd.metadata[0].name
-}
-
-resource "kubernetes_namespace" "mario" {
-  metadata {
-    name = "mario"
-  }
-
-  depends_on = [argocd_central]
 }

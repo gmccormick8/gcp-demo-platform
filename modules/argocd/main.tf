@@ -24,7 +24,8 @@ resource "kubernetes_service_account" "argocd_k8s" {
 resource "google_service_account_iam_binding" "workload_identity_binding" {
   service_account_id = google_service_account.argocd_gcp_sa.name
   role               = "roles/iam.workloadIdentityUser"
-  members            = "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.argocd.metadata["name"]}/${kubernetes_service_account.argocd_k8s.metadata["name"]}]"
+  members            = ["serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.argocd.metadata["name"]}/${kubernetes_service_account.argocd_k8s.metadata["name"]}]"]
+
 }
 
 

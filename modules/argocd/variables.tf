@@ -35,5 +35,5 @@ variable "k8s_sa_name" {
 
 variable "namespace" {
   description = "Kubernetes namespace where ArgoCD will be installed"
-  type        = string  
+  type        = string
 }

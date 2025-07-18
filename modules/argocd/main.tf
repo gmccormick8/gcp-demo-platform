@@ -143,11 +143,9 @@ resource "helm_release" "mario_applicationset" {
   namespace  = var.namespace
 
   values = [
-    jsonencode({
-      applications = []
-      applicationsets = [
-        {
-          name = "demo-applicationset"
+    yamlencode({
+      applicationsets = {
+        demo-applicationset = {
           generators = [{
             list = {
               elements = [
@@ -175,6 +173,10 @@ resource "helm_release" "mario_applicationset" {
           template = {
             metadata = {
               name = "{{name}}"
+              labels = {
+                "app.kubernetes.io/instance" = "{{name}}"
+                "app.kubernetes.io/name"     = "mario"
+              }
             }
             spec = {
               project = "default"
@@ -183,12 +185,10 @@ resource "helm_release" "mario_applicationset" {
                 targetRevision = var.environment
                 path           = "helm/mario"
                 helm = {
-                  parameters = [
-                    {
-                      name  = "gateway.enable"
-                      value = "{{isGateway}}"
-                    }
-                  ]
+                  parameters = [{
+                    name  = "gateway.enable"
+                    value = "{{isGateway}}"
+                  }]
                 }
               }
               destination = {
@@ -200,11 +200,21 @@ resource "helm_release" "mario_applicationset" {
                   prune    = true
                   selfHeal = true
                 }
+                syncOptions = [
+                  "CreateNamespace=true"
+                ]
               }
+              ignoreDifferences = [{
+                group = "apps"
+                kind  = "Deployment"
+                jsonPointers = [
+                  "/spec/replicas"
+                ]
+              }]
             }
           }
         }
-      ]
+      }
     })
   ]
 

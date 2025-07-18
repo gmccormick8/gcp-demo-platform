@@ -202,12 +202,12 @@ resource "kubernetes_namespace" "mario" {
 }
 
 module "argocd_central" {
-  source      = "./modules/argocd"
-  project_id  = var.project_id
-  gcp_sa_name = "argocd-central-gcp-sa"
-  k8s_sa_name = "argocd-central-k8s-sa"
-  namespace   = kubernetes_namespace.argocd.metadata[0].name
-  environment = var.environment
+  source          = "./modules/argocd"
+  project_id      = var.project_id
+  gcp_sa_name     = "argocd-central-gcp-sa"
+  k8s_sa_name     = "argocd-central-k8s-sa"
+  namespace       = kubernetes_namespace.argocd.metadata[0].name
+  environment     = var.environment
   gitops_repo_url = "https://github.com/gmccormick8/gcp-demo-app.git"
 
   central_cluster_endpoint       = module.gke_clusters["central"].cluster_endpoint

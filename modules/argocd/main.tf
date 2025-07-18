@@ -50,13 +50,13 @@ resource "helm_release" "argocd" {
           name   = kubernetes_service_account.argocd_k8s.metadata[0].name
         }
       }
-      repoServer : {
+      applicationSet : {
         serviceAccount : {
           create = false
           name   = kubernetes_service_account.argocd_k8s.metadata[0].name
         }
       }
-      applicationSet : {
+      repoServer : {
         serviceAccount : {
           create = false
           name   = kubernetes_service_account.argocd_k8s.metadata[0].name
@@ -68,6 +68,35 @@ resource "helm_release" "argocd" {
   depends_on = [
     kubernetes_service_account.argocd_k8s
   ]
+}
+
+# Create ArgoCD project first
+resource "kubernetes_manifest" "argocd_project" {
+  manifest = {
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "AppProject"
+    metadata = {
+      name      = "default"
+      namespace = var.namespace
+    }
+    spec = {
+      description = "Default project"
+      sourceRepos = ["*"]
+      destinations = [
+        {
+          server    = "*"
+          namespace = "*"
+        }
+      ]
+      clusterResourceWhitelist = [
+        {
+          group = "*"
+          kind  = "*"
+        }
+      ]
+    }
+  }
+  depends_on = [helm_release.argocd]
 }
 
 resource "kubernetes_secret" "argocd_east_cluster" {
@@ -146,6 +175,11 @@ resource "helm_release" "mario_applicationset" {
     yamlencode({
       applicationsets = {
         demo-applicationset = {
+          createNamespace = true
+          additionalAnnotations = {
+            "argocd.argoproj.io/refresh" = "hard"
+            "timestamp"                  = timestamp()
+          }
           generators = [{
             list = {
               elements = [
@@ -177,12 +211,13 @@ resource "helm_release" "mario_applicationset" {
                 "app.kubernetes.io/instance" = "{{name}}"
                 "app.kubernetes.io/name"     = "mario"
               }
+              finalizers = ["resources-finalizer.argocd.argoproj.io"]
             }
             spec = {
               project = "default"
               source = {
                 repoURL        = var.gitops_repo_url
-                targetRevision = "HEAD"
+                targetRevision = var.environment
                 path           = "helm/mario"
                 helm = {
                   parameters = [{
@@ -204,13 +239,6 @@ resource "helm_release" "mario_applicationset" {
                   "CreateNamespace=true"
                 ]
               }
-              ignoreDifferences = [{
-                group = "apps"
-                kind  = "Deployment"
-                jsonPointers = [
-                  "/spec/replicas"
-                ]
-              }]
             }
           }
         }
@@ -219,6 +247,27 @@ resource "helm_release" "mario_applicationset" {
   ]
 
   depends_on = [
-    helm_release.argocd
+    helm_release.argocd,
+    kubernetes_manifest.argocd_project
+  ]
+}
+
+# Add validation checks
+resource "null_resource" "verify_applicationset" {
+  triggers = {
+    mario_apps_revision = helm_release.mario_applicationset.revision
+  }
+
+  provisioner "local-exec" {
+    command = <<EOT
+      echo "Waiting for ApplicationSet to be ready..."
+      kubectl wait --for=condition=established --timeout=60s crd/applicationsets.argoproj.io
+      echo "Verifying ApplicationSet..."
+      kubectl get applicationset -n ${var.namespace} demo-applicationset -o jsonpath='{.status.conditions[?(@.type=="ResourcesUpToDate")].status}'
+    EOT
+  }
+
+  depends_on = [
+    helm_release.mario_applicationset
   ]
 }

@@ -176,10 +176,6 @@ resource "helm_release" "mario_applicationset" {
       applicationsets = {
         demo-applicationset = {
           createNamespace = true
-          additionalAnnotations = {
-            "argocd.argoproj.io/refresh" = "hard"
-            "timestamp"                  = timestamp()
-          }
           generators = [{
             list = {
               elements = [
@@ -249,25 +245,5 @@ resource "helm_release" "mario_applicationset" {
   depends_on = [
     helm_release.argocd,
     kubernetes_manifest.argocd_project
-  ]
-}
-
-# Add validation checks
-resource "null_resource" "verify_applicationset" {
-  triggers = {
-    mario_apps_revision = helm_release.mario_applicationset.revision
-  }
-
-  provisioner "local-exec" {
-    command = <<EOT
-      echo "Waiting for ApplicationSet to be ready..."
-      kubectl wait --for=condition=established --timeout=60s crd/applicationsets.argoproj.io
-      echo "Verifying ApplicationSet..."
-      kubectl get applicationset -n ${var.namespace} demo-applicationset -o jsonpath='{.status.conditions[?(@.type=="ResourcesUpToDate")].status}'
-    EOT
-  }
-
-  depends_on = [
-    helm_release.mario_applicationset
   ]
 }

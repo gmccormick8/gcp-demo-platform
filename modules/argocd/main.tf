@@ -131,19 +131,19 @@ resource "kubernetes_manifest" "argocd_applicationset" {
                 name      = "mario-east"
                 namespace = "mario"
                 server    = var.east_cluster_endpoint
-                isGateway = false
+                isGateway = "false"
               },
               {
                 name      = "mario-central"
                 namespace = "mario"
                 server    = var.central_cluster_endpoint
-                isGateway = true
+                isGateway = "true"
               },
               {
                 name      = "mario-west"
                 namespace = "mario"
                 server    = var.west_cluster_endpoint
-                isGateway = false
+                isGateway = "false"
               }
             ]
           }
@@ -162,7 +162,7 @@ resource "kubernetes_manifest" "argocd_applicationset" {
             helm = {
               parameters = [
                 {
-                  name  = "isGateway"
+                  name  = "gateway.enable"
                   value = "{{isGateway}}"
                 }
               ]

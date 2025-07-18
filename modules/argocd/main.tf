@@ -61,6 +61,76 @@ resource "helm_release" "argocd" {
           create = false
           name   = kubernetes_service_account.argocd_k8s.metadata[0].name
         }
+        enabled = true
+        extraObjects = [
+          {
+            apiVersion = "argoproj.io/v1alpha1"
+            kind       = "ApplicationSet"
+            metadata = {
+              name      = "demo-applicationset"
+              namespace = var.namespace
+            }
+            spec = {
+              generators = [
+                {
+                  list = {
+                    elements = [
+                      {
+                        name      = "mario-east"
+                        namespace = "mario"
+                        server    = var.east_cluster_endpoint
+                        isGateway = "false"
+                      },
+                      {
+                        name      = "mario-central"
+                        namespace = "mario"
+                        server    = var.central_cluster_endpoint
+                        isGateway = "true"
+                      },
+                      {
+                        name      = "mario-west"
+                        namespace = "mario"
+                        server    = var.west_cluster_endpoint
+                        isGateway = "false"
+                      }
+                    ]
+                  }
+                }
+              ]
+              template = {
+                metadata = {
+                  name = "{{name}}"
+                }
+                spec = {
+                  project = "default"
+                  source = {
+                    repoURL        = "https://github.com/gmccormick8/gcp-demo-app.git"
+                    targetRevision = "HEAD"
+                    path           = "helm/mario"
+                    helm = {
+                      parameters = [
+                        {
+                          name  = "gateway.enable"
+                          value = "{{isGateway}}"
+                        }
+                      ]
+                    }
+                  }
+                  destination = {
+                    server    = "{{server}}"
+                    namespace = "{{namespace}}"
+                  }
+                  syncPolicy = {
+                    automated = {
+                      prune    = true
+                      selfHeal = true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
       }
     })
   ]
@@ -114,76 +184,3 @@ resource "kubernetes_secret" "argocd_west_cluster" {
   depends_on = [helm_release.argocd]
 }
 
-resource "kubernetes_manifest" "argocd_applicationset" {
-  manifest = {
-    apiVersion = "argoproj.io/v1alpha1"
-    kind       = "ApplicationSet"
-    metadata = {
-      name      = "demo-applicationset"
-      namespace = var.namespace
-    }
-    spec = {
-      generators = [
-        {
-          list = {
-            elements = [
-              {
-                name      = "mario-east"
-                namespace = "mario"
-                server    = var.east_cluster_endpoint
-                isGateway = "false"
-              },
-              {
-                name      = "mario-central"
-                namespace = "mario"
-                server    = var.central_cluster_endpoint
-                isGateway = "true"
-              },
-              {
-                name      = "mario-west"
-                namespace = "mario"
-                server    = var.west_cluster_endpoint
-                isGateway = "false"
-              }
-            ]
-          }
-        }
-      ]
-      template = {
-        metadata = {
-          name = "{{name}}"
-        }
-        spec = {
-          project = "default"
-          source = {
-            repoURL        = "https://github.com/gmccormick8/gcp-demo-app.git"
-            targetRevision = "HEAD"
-            path           = "helm/mario"
-            helm = {
-              parameters = [
-                {
-                  name  = "gateway.enable"
-                  value = "{{isGateway}}"
-                }
-              ]
-            }
-          }
-          destination = {
-            server    = "{{server}}"
-            namespace = "{{namespace}}"
-          }
-          syncPolicy = {
-            automated = {
-              prune    = true
-              selfHeal = true
-            }
-          }
-        }
-      }
-    }
-  }
-
-  depends_on = [
-    helm_release.argocd
-  ]
-}

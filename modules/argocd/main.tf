@@ -80,13 +80,13 @@ resource "kubernetes_secret" "argocd_east_cluster" {
   }
   data = {
     name   = "east"
-    server = var.east_cluster_endpoint
+    server = "https://${var.east_cluster_endpoint}"
     config = jsonencode({
-      bearerToken = var.east_access_token
       tlsClientConfig = {
         insecure = false
         caData   = var.east_cluster_ca_certificate
       }
+      bearerToken = var.east_access_token
     })
   }
   depends_on = [helm_release.argocd]
@@ -102,13 +102,13 @@ resource "kubernetes_secret" "argocd_west_cluster" {
   }
   data = {
     name   = "west"
-    server = var.west_cluster_endpoint
+    server = "https://${var.west_cluster_endpoint}"
     config = jsonencode({
-      bearerToken = var.west_access_token
       tlsClientConfig = {
         insecure = false
         caData   = var.west_cluster_ca_certificate
       }
+      bearerToken = var.west_access_token
     })
   }
   depends_on = [helm_release.argocd]
@@ -124,13 +124,13 @@ resource "kubernetes_secret" "argocd_central_cluster" {
   }
   data = {
     name   = "central"
-    server = var.central_cluster_endpoint
+    server = "https://${var.central_cluster_endpoint}"
     config = jsonencode({
-      bearerToken = var.central_access_token
       tlsClientConfig = {
         insecure = false
         caData   = var.central_cluster_ca_certificate
       }
+      bearerToken = var.central_access_token
     })
   }
   depends_on = [helm_release.argocd]

@@ -15,13 +15,13 @@ resource "kubernetes_service_account" "argocd_k8s" {
 }
 
 resource "google_service_account_iam_binding" "workload_identity_binding" {
-  service_account_id = google_service_account.argocd_gcp_sa.name
+  service_account_id = google_service_account.argocd_gcp_sa.email
   role               = "roles/iam.workloadIdentityUser"
   members            = ["serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/${kubernetes_service_account.argocd_k8s.metadata[0].name}]"]
 }
 
-resource "google_service_account_iam_binding" "cluster_admind_binding" {
-  service_account_id = google_service_account.argocd_gcp_sa.name
+resource "google_service_account_iam_binding" "cluster_admin_binding" {
+  service_account_id = google_service_account.argocd_gcp_sa.email
   role               = "roles/container.clusterAdmin"
   members            = ["serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/${kubernetes_service_account.argocd_k8s.metadata[0].name}]"]
 }

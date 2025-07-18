@@ -20,7 +20,7 @@ resource "google_service_account_iam_binding" "workload_identity_binding" {
   members            = ["serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/${kubernetes_service_account.argocd_k8s.metadata[0].name}]"]
 }
 
-resource "google_service_account_iam_binding" "workload_identity_binding" {
+resource "google_service_account_iam_binding" "cluster_admind_binding" {
   service_account_id = google_service_account.argocd_gcp_sa.name
   role               = "roles/container.clusterAdmin"
   members            = ["serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/${kubernetes_service_account.argocd_k8s.metadata[0].name}]"]

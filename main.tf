@@ -210,17 +210,17 @@ module "argocd_central" {
   environment     = var.environment
   gitops_repo_url = "https://github.com/gmccormick8/gcp-demo-app.git"
 
-  central_cluster_endpoint       = module.gke_clusters["central"].cluster_private_endpoint
+  central_cluster_endpoint       = module.gke_clusters["central"].cluster_endpoint
   central_cluster_ca_certificate = module.gke_clusters["central"].master_auth.cluster_ca_certificate
   central_access_token           = data.google_client_config.default.access_token
   central_region                 = local.clusters["central"].region
 
-  east_cluster_endpoint       = module.gke_clusters["east"].cluster_private_endpoint
+  east_cluster_endpoint       = module.gke_clusters["east"].cluster_endpoint
   east_cluster_ca_certificate = module.gke_clusters["east"].master_auth.cluster_ca_certificate
   east_access_token           = data.google_client_config.default.access_token
   east_region                 = local.clusters["east"].region
 
-  west_cluster_endpoint       = module.gke_clusters["west"].cluster_private_endpoint
+  west_cluster_endpoint       = module.gke_clusters["west"].cluster_endpoint
   west_cluster_ca_certificate = module.gke_clusters["west"].master_auth.cluster_ca_certificate
   west_access_token           = data.google_client_config.default.access_token
   west_region                 = local.clusters["west"].region

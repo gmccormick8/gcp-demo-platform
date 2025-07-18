@@ -151,7 +151,7 @@ resource "kubernetes_manifest" "argocd_applicationset" {
       ]
       template = {
         metadata = {
-          name = "{{name}}"
+          name = "${spec.generators[0].list.elements[0].name}"
         }
         spec = {
           project = "default"
@@ -163,14 +163,14 @@ resource "kubernetes_manifest" "argocd_applicationset" {
               parameters = [
                 {
                   name  = "gateway.enable"
-                  value = "{{isGateway}}"
+                  value = "${isGateway}"
                 }
               ]
             }
           }
           destination = {
-            server    = "{{server}}"
-            namespace = "{{namespace}}"
+            server    = "${server}"
+            namespace = "${namespace}"
           }
           syncPolicy = {
             automated = {

@@ -116,77 +116,68 @@ resource "kubernetes_secret" "argocd_west_cluster" {
 
 resource "kubernetes_manifest" "argocd_applicationset" {
   manifest = {
-    "apiVersion" = "argoproj.io/v1alpha1"
-    "kind"       = "ApplicationSet"
-    "metadata" = {
-      "name"      = "demo-applicationset"
-      "namespace" = var.namespace
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "ApplicationSet"
+    metadata = {
+      name      = "demo-applicationset"
+      namespace = var.namespace
     }
-    "spec" = {
-      "generators" = [
+    spec = {
+      generators = [
         {
-          "list" = {
-            "elements" = [
+          list = {
+            elements = [
               {
-                "name"      = "mario-east"
-                "namespace" = "mario"
-                "server"    = var.east_cluster_endpoint
-                "isGateway" = false
+                name      = "mario-east"
+                namespace = "mario"
+                server    = var.east_cluster_endpoint
+                isGateway = false
               },
               {
-                "name"      = "mario-central"
-                "namespace" = "mario"
-                "server"    = var.central_cluster_endpoint
-                "isGateway" = true
+                name      = "mario-central"
+                namespace = "mario"
+                server    = var.central_cluster_endpoint
+                isGateway = true
               },
               {
-                "name"      = "mario-west"
-                "namespace" = "mario"
-                "server"    = var.west_cluster_endpoint
-                "isGateway" = false
+                name      = "mario-west"
+                namespace = "mario"
+                server    = var.west_cluster_endpoint
+                isGateway = false
               }
             ]
           }
         }
       ]
-      "template" = {
-        "metadata" = {
-          "name" = "{{name}}"
+      template = {
+        metadata = {
+          name = "{{name}}"
         }
-        "spec" = {
-          "project" = "default"
-          "source" = {
-            "repoURL"        = "https://github.com/gmccormick8/gcp-demo-app.git"
-            "targetRevision" = "HEAD"
-            "path"           = "helm/mario"
-            "helm" = {
-              "parameters" = [
+        spec = {
+          project = "default"
+          source = {
+            repoURL        = "https://github.com/gmccormick8/gcp-demo-app.git"
+            targetRevision = "HEAD"
+            path           = "helm/mario"
+            helm = {
+              parameters = [
                 {
-                  "name"  = "isGateway"
-                  "value" = "{{isGateway}}"
+                  name  = "isGateway"
+                  value = "{{isGateway}}"
                 }
               ]
             }
           }
-          "destination" = {
-            "server"    = "{{server}}"
-            "namespace" = "{{namespace}}"
+          destination = {
+            server    = "{{server}}"
+            namespace = "{{namespace}}"
           }
-          "syncPolicy" = {
-            "automated" = {
-              "prune"    = true
-              "selfHeal" = true
+          syncPolicy = {
+            automated = {
+              prune    = true
+              selfHeal = true
             }
           }
-          "ignoreDifferences" = [
-            {
-              "group" = "apps"
-              "kind"  = "Deployment"
-              "jsonPointers" = [
-                "/spec/replicas"
-              ]
-            }
-          ]
         }
       }
     }

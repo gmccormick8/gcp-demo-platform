@@ -9,8 +9,3 @@ variable "environment" {
   default     = "dev"
 }
 
-variable "gitops_repo_url" {
-  description = "URL of the Git repository containing ArgoCD configuration"
-  type        = string
-  default     = "https://github.com/gmccormick8/gcp-demo-app.git"
-}

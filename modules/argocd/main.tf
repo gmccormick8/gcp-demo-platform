@@ -41,7 +41,7 @@ resource "helm_release" "argocd" {
           }
         }
         ingress : {
-          enabled = false
+          enabled = true
         }
       }
       controller : {
@@ -61,76 +61,6 @@ resource "helm_release" "argocd" {
           create = false
           name   = kubernetes_service_account.argocd_k8s.metadata[0].name
         }
-        enabled = true
-        extraObjects = [
-          {
-            apiVersion = "argoproj.io/v1alpha1"
-            kind       = "ApplicationSet"
-            metadata = {
-              name      = "demo-applicationset"
-              namespace = var.namespace
-            }
-            spec = {
-              generators = [
-                {
-                  list = {
-                    elements = [
-                      {
-                        name      = "mario-east"
-                        namespace = "mario"
-                        server    = var.east_cluster_endpoint
-                        isGateway = "false"
-                      },
-                      {
-                        name      = "mario-central"
-                        namespace = "mario"
-                        server    = var.central_cluster_endpoint
-                        isGateway = "true"
-                      },
-                      {
-                        name      = "mario-west"
-                        namespace = "mario"
-                        server    = var.west_cluster_endpoint
-                        isGateway = "false"
-                      }
-                    ]
-                  }
-                }
-              ]
-              template = {
-                metadata = {
-                  name = "{{name}}"
-                }
-                spec = {
-                  project = "default"
-                  source = {
-                    repoURL        = "https://github.com/gmccormick8/gcp-demo-app.git"
-                    targetRevision = "HEAD"
-                    path           = "helm/mario"
-                    helm = {
-                      parameters = [
-                        {
-                          name  = "gateway.enable"
-                          value = "{{isGateway}}"
-                        }
-                      ]
-                    }
-                  }
-                  destination = {
-                    server    = "{{server}}"
-                    namespace = "{{namespace}}"
-                  }
-                  syncPolicy = {
-                    automated = {
-                      prune    = true
-                      selfHeal = true
-                    }
-                  }
-                }
-              }
-            }
-          }
-        ]
       }
     })
   ]
@@ -154,7 +84,7 @@ resource "kubernetes_secret" "argocd_east_cluster" {
     config = jsonencode({
       bearerToken = var.east_access_token
       tlsClientConfig = {
-        insecure = false
+        insecure = true
         caData   = var.east_cluster_ca_certificate
       }
     })
@@ -176,7 +106,7 @@ resource "kubernetes_secret" "argocd_west_cluster" {
     config = jsonencode({
       bearerToken = var.west_access_token
       tlsClientConfig = {
-        insecure = false
+        insecure = true
         caData   = var.west_cluster_ca_certificate
       }
     })
@@ -184,3 +114,101 @@ resource "kubernetes_secret" "argocd_west_cluster" {
   depends_on = [helm_release.argocd]
 }
 
+resource "kubernetes_secret" "argocd_central_cluster" {
+  metadata {
+    name      = "argocd-cluster-central"
+    namespace = var.namespace
+    labels = {
+      "argocd.argoproj.io/secret-type" = "cluster"
+    }
+  }
+  data = {
+    name   = "central"
+    server = var.central_cluster_endpoint
+    config = jsonencode({
+      bearerToken = var.central_access_token
+      tlsClientConfig = {
+        insecure = true
+        caData   = var.central_cluster_ca_certificate
+      }
+    })
+  }
+  depends_on = [helm_release.argocd]
+}
+
+resource "helm_release" "mario_applicationset" {
+  name       = "mario-apps"
+  repository = "https://argoproj.github.io/argo-helm"
+  chart      = "argocd-apps"
+  namespace  = var.namespace
+
+  values = [
+    jsonencode({
+      applications = []
+      applicationsets = [
+        {
+          name = "demo-applicationset"
+          generators = [{
+            list = {
+              elements = [
+                {
+                  name      = "mario-east"
+                  namespace = "mario"
+                  server    = var.east_cluster_endpoint
+                  isGateway = false
+                },
+                {
+                  name      = "mario-central"
+                  namespace = "mario"
+                  server    = var.central_cluster_endpoint
+                  isGateway = true
+                },
+                {
+                  name      = "mario-west"
+                  namespace = "mario"
+                  server    = var.west_cluster_endpoint
+                  isGateway = false
+                }
+              ]
+            }
+          }]
+          template = {
+            metadata = {
+              name = "{{name}}"
+            }
+            spec = {
+              project = "default"
+              source = {
+                repoURL        = var.gitops_repo_url
+                targetRevision = var.environment
+                path           = "helm/mario"
+                helm = {
+                  parameters = [
+                    {
+                      name  = "gateway.enable"
+                      value = "{{isGateway}}"
+                    }
+                  ]
+                }
+              }
+              destination = {
+                server    = "{{server}}"
+                namespace = "{{namespace}}"
+              }
+              syncPolicy = {
+                automated = {
+                  prune    = true
+                  selfHeal = true
+                }
+              }
+            }
+          }
+        }
+      ]
+    })
+  ]
+
+  depends_on = [
+    helm_release.argocd
+  ]
+}

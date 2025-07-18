@@ -202,23 +202,26 @@ resource "kubernetes_namespace" "mario" {
 }
 
 module "argocd_central" {
-  source                 = "./modules/argocd"
-  cluster_endpoint       = module.gke_clusters["central"].cluster_endpoint
-  cluster_ca_certificate = module.gke_clusters["central"].master_auth.cluster_ca_certificate
-  access_token           = data.google_client_config.default.access_token
-  region                 = local.clusters["central"].region
-  project_id             = var.project_id
-  gcp_sa_name            = "argocd-central-gcp-sa"
-  k8s_sa_name            = "argocd-central-k8s-sa"
-  namespace              = kubernetes_namespace.argocd.metadata[0].name
+  source      = "./modules/argocd"
+  project_id  = var.project_id
+  gcp_sa_name = "argocd-central-gcp-sa"
+  k8s_sa_name = "argocd-central-k8s-sa"
+  namespace   = kubernetes_namespace.argocd.metadata[0].name
+  environment = var.environment
+  gitops_repo_url = "https://github.com/gmccormick8/gcp-demo-app.git"
+
+  central_cluster_endpoint       = module.gke_clusters["central"].cluster_endpoint
+  central_cluster_ca_certificate = module.gke_clusters["central"].master_auth.cluster_ca_certificate
+  central_access_token           = data.google_client_config.default.access_token
+  central_region                 = local.clusters["central"].region
 
   east_cluster_endpoint       = module.gke_clusters["east"].cluster_endpoint
   east_cluster_ca_certificate = module.gke_clusters["east"].master_auth.cluster_ca_certificate
   east_access_token           = data.google_client_config.default.access_token
-
-  central_cluster_endpoint = module.gke_clusters["central"].cluster_endpoint
+  east_region                 = local.clusters["east"].region
 
   west_cluster_endpoint       = module.gke_clusters["west"].cluster_endpoint
   west_cluster_ca_certificate = module.gke_clusters["west"].master_auth.cluster_ca_certificate
   west_access_token           = data.google_client_config.default.access_token
+  west_region                 = local.clusters["west"].region
 }

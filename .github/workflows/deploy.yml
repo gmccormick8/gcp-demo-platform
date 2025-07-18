@@ -162,10 +162,9 @@ jobs:
           issue-title: 'Manual Approval for ${{ github.ref_name }} Deployment'
           issue-body: |
             Please review this deployment to ${{ github.ref_name }}.
-
+            <br />
             ${{ steps.plan_summary.outputs.markdown }}
-            
-            End of Planned Changes
+            <br />
           fail-on-denial: true
 
 

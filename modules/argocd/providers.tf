@@ -18,15 +18,15 @@ terraform {
 }
 
 provider "kubernetes" {
-  host                   = "https://${var.cluster_endpoint}"
-  token                  = var.access_token
-  cluster_ca_certificate = base64decode(var.cluster_ca_certificate)
+  host                   = "https://${var.central_cluster_endpoint}"
+  token                  = var.central_access_token
+  cluster_ca_certificate = base64decode(var.central_cluster_ca_certificate)
 }
 
 provider "helm" {
   kubernetes {
-    host                   = "https://${var.cluster_endpoint}"
-    token                  = var.access_token
-    cluster_ca_certificate = base64decode(var.cluster_ca_certificate)
+    host                   = "https://${var.central_cluster_endpoint}"
+    token                  = var.central_access_token
+    cluster_ca_certificate = base64decode(var.central_cluster_ca_certificate)
   }
 }

@@ -128,8 +128,22 @@ resource "kubernetes_manifest" "argocd_applicationset" {
           "list" = {
             "elements" = [
               {
-                "name"      = "mario"
+                "name"      = "mario-east"
                 "namespace" = "mario"
+                "server"    = var.east_cluster_endpoint
+                "isGateway" = false
+              },
+              {
+                "name"      = "mario-central"
+                "namespace" = "mario"
+                "server"    = var.central_cluster_endpoint
+                "isGateway" = true
+              },
+              {
+                "name"      = "mario-west"
+                "namespace" = "mario"
+                "server"    = var.west_cluster_endpoint
+                "isGateway" = false
               }
             ]
           }
@@ -137,7 +151,7 @@ resource "kubernetes_manifest" "argocd_applicationset" {
       ]
       "template" = {
         "metadata" = {
-          "name" = "mario"
+          "name" = "{{name}}"
         }
         "spec" = {
           "project" = "default"
@@ -146,12 +160,17 @@ resource "kubernetes_manifest" "argocd_applicationset" {
             "targetRevision" = "HEAD"
             "path"           = "helm/mario"
             "helm" = {
-              "valueFiles" = []
+              "parameters" = [
+                {
+                  "name"  = "isGateway"
+                  "value" = "{{isGateway}}"
+                }
+              ]
             }
           }
           "destination" = {
-            "server"    = "https://kubernetes.default.svc"
-            "namespace" = "mario"
+            "server"    = "{{server}}"
+            "namespace" = "{{namespace}}"
           }
           "syncPolicy" = {
             "automated" = {

@@ -1,3 +1,8 @@
+variable "central_cluster_endpoint" {
+  description = "The endpoint of the central Kubernetes cluster to register with ArgoCD"
+  type        = string
+  default     = null
+}
 variable "east_cluster_endpoint" {
   description = "The endpoint of the east Kubernetes cluster to register with ArgoCD"
   type        = string

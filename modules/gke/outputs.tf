@@ -26,3 +26,8 @@ output "cluster_endpoint" {
   description = "The IP address of the cluster master"
   value       = google_container_cluster.primary.endpoint
 }
+
+output "cluster_private_endpoint" {
+  description = "The private endpoint (internal IP address) of the GKE cluster master."
+  value       = google_container_cluster.primary.private_cluster_config[0].private_endpoint
+}

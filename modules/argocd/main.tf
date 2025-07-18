@@ -137,10 +137,10 @@ resource "kubernetes_secret" "argocd_central_cluster" {
 }
 
 resource "helm_release" "mario_application" {
-  name       = "mario-apps"
-  repository = "https://argoproj.github.io/argo-helm"
-  chart      = "argocd-apps"
-  namespace  = var.namespace
+  name             = "mario-apps"
+  repository       = "https://argoproj.github.io/argo-helm"
+  chart            = "argocd-apps"
+  namespace        = var.namespace
   create_namespace = true
 
   values = [

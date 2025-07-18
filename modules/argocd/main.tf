@@ -84,7 +84,7 @@ resource "kubernetes_secret" "argocd_east_cluster" {
     config = jsonencode({
       bearerToken = var.east_access_token
       tlsClientConfig = {
-        insecure = true
+        insecure = false
         caData   = var.east_cluster_ca_certificate
       }
     })
@@ -106,7 +106,7 @@ resource "kubernetes_secret" "argocd_west_cluster" {
     config = jsonencode({
       bearerToken = var.west_access_token
       tlsClientConfig = {
-        insecure = true
+        insecure = false
         caData   = var.west_cluster_ca_certificate
       }
     })
@@ -128,7 +128,7 @@ resource "kubernetes_secret" "argocd_central_cluster" {
     config = jsonencode({
       bearerToken = var.central_access_token
       tlsClientConfig = {
-        insecure = true
+        insecure = false
         caData   = var.central_cluster_ca_certificate
       }
     })

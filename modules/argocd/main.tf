@@ -50,13 +50,13 @@ resource "helm_release" "argocd" {
           name   = kubernetes_service_account.argocd_k8s.metadata[0].name
         }
       }
-      applicationSet : {
+      repoServer : {
         serviceAccount : {
           create = false
           name   = kubernetes_service_account.argocd_k8s.metadata[0].name
         }
       }
-      repoServer : {
+      applicationSet : {
         serviceAccount : {
           create = false
           name   = kubernetes_service_account.argocd_k8s.metadata[0].name
@@ -68,35 +68,6 @@ resource "helm_release" "argocd" {
   depends_on = [
     kubernetes_service_account.argocd_k8s
   ]
-}
-
-# Create ArgoCD project first
-resource "kubernetes_manifest" "argocd_project" {
-  manifest = {
-    apiVersion = "argoproj.io/v1alpha1"
-    kind       = "AppProject"
-    metadata = {
-      name      = "default"
-      namespace = var.namespace
-    }
-    spec = {
-      description = "Default project"
-      sourceRepos = ["*"]
-      destinations = [
-        {
-          server    = "*"
-          namespace = "*"
-        }
-      ]
-      clusterResourceWhitelist = [
-        {
-          group = "*"
-          kind  = "*"
-        }
-      ]
-    }
-  }
-  depends_on = [helm_release.argocd]
 }
 
 resource "kubernetes_secret" "argocd_east_cluster" {
@@ -165,77 +136,107 @@ resource "kubernetes_secret" "argocd_central_cluster" {
   depends_on = [helm_release.argocd]
 }
 
-resource "helm_release" "mario_applicationset" {
+resource "helm_release" "mario_application" {
   name       = "mario-apps"
   repository = "https://argoproj.github.io/argo-helm"
   chart      = "argocd-apps"
   namespace  = var.namespace
+  create_namespace = true
 
   values = [
     yamlencode({
-      applicationsets = {
-        demo-applicationset = {
-          createNamespace = true
-          generators = [{
-            list = {
-              elements = [
-                {
-                  name      = "mario-east"
-                  namespace = "mario"
-                  server    = var.east_cluster_endpoint
-                  isGateway = false
-                },
-                {
-                  name      = "mario-central"
-                  namespace = "mario"
-                  server    = var.central_cluster_endpoint
-                  isGateway = true
-                },
-                {
-                  name      = "mario-west"
-                  namespace = "mario"
-                  server    = var.west_cluster_endpoint
-                  isGateway = false
+      applications = {
+        "mario-east" = {
+          name      = "mario-east"
+          namespace = var.namespace
+          project   = "default"
+          source = {
+            repoURL        = var.gitops_repo_url
+            targetRevision = var.environment
+            path           = "helm/mario"
+            helm = {
+              values = yamlencode({
+                gateway = {
+                  enable = false
                 }
-              ]
-            }
-          }]
-          template = {
-            metadata = {
-              name = "{{name}}"
-              labels = {
-                "app.kubernetes.io/instance" = "{{name}}"
-                "app.kubernetes.io/name"     = "mario"
-              }
-              finalizers = ["resources-finalizer.argocd.argoproj.io"]
-            }
-            spec = {
-              project = "default"
-              source = {
-                repoURL        = var.gitops_repo_url
-                targetRevision = var.environment
-                path           = "helm/mario"
-                helm = {
-                  parameters = [{
-                    name  = "gateway.enable"
-                    value = "{{isGateway}}"
-                  }]
+                global = {
+                  environment = var.environment
                 }
-              }
-              destination = {
-                server    = "{{server}}"
-                namespace = "{{namespace}}"
-              }
-              syncPolicy = {
-                automated = {
-                  prune    = true
-                  selfHeal = true
-                }
-                syncOptions = [
-                  "CreateNamespace=true"
-                ]
-              }
+              })
             }
+          }
+          destination = {
+            server    = var.east_cluster_endpoint
+            namespace = "mario"
+          }
+          syncPolicy = {
+            automated = {
+              prune    = true
+              selfHeal = true
+            }
+            syncOptions = ["CreateNamespace=true"]
+          }
+        }
+        "mario-central" = {
+          name      = "mario-central"
+          namespace = var.namespace
+          project   = "default"
+          source = {
+            repoURL        = var.gitops_repo_url
+            targetRevision = var.environment
+            path           = "helm/mario"
+            helm = {
+              values = yamlencode({
+                gateway = {
+                  enable = true
+                }
+                global = {
+                  environment = var.environment
+                }
+              })
+            }
+          }
+          destination = {
+            server    = var.central_cluster_endpoint
+            namespace = "mario"
+          }
+          syncPolicy = {
+            automated = {
+              prune    = true
+              selfHeal = true
+            }
+            syncOptions = ["CreateNamespace=true"]
+          }
+        }
+        "mario-west" = {
+          name      = "mario-west"
+          namespace = var.namespace
+          project   = "default"
+          source = {
+            repoURL        = var.gitops_repo_url
+            targetRevision = var.environment
+            path           = "helm/mario"
+            helm = {
+              values = yamlencode({
+                gateway = {
+                  enable = false
+                }
+                global = {
+                  environment = var.environment
+                }
+              })
+            }
+          }
+          destination = {
+            server    = var.west_cluster_endpoint
+            namespace = "mario"
+          }
+          syncPolicy = {
+            automated = {
+              prune    = true
+              selfHeal = true
+            }
+            syncOptions = ["CreateNamespace=true"]
           }
         }
       }
@@ -244,6 +245,8 @@ resource "helm_release" "mario_applicationset" {
 
   depends_on = [
     helm_release.argocd,
-    kubernetes_manifest.argocd_project
+    kubernetes_secret.argocd_east_cluster,
+    kubernetes_secret.argocd_west_cluster,
+    kubernetes_secret.argocd_central_cluster
   ]
 }

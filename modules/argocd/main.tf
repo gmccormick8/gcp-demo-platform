@@ -182,7 +182,7 @@ resource "helm_release" "mario_applicationset" {
               project = "default"
               source = {
                 repoURL        = var.gitops_repo_url
-                targetRevision = var.environment
+                targetRevision = "HEAD"
                 path           = "helm/mario"
                 helm = {
                   parameters = [{

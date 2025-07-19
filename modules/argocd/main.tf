@@ -137,11 +137,10 @@ resource "kubernetes_secret" "argocd_central_cluster" {
 }
 
 resource "helm_release" "mario_application" {
-  name             = "mario-apps"
-  repository       = "https://argoproj.github.io/argo-helm"
-  chart            = "argocd-apps"
-  namespace        = var.namespace
-  create_namespace = true
+  name       = "mario-apps"
+  repository = "https://argoproj.github.io/argo-helm"
+  chart      = "argocd-apps"
+  namespace  = var.namespace
 
   values = [
     yamlencode({
@@ -171,10 +170,19 @@ resource "helm_release" "mario_application" {
           }
           syncPolicy = {
             automated = {
-              prune    = true
-              selfHeal = true
+              prune      = true
+              selfHeal   = true
+              allowEmpty = false
             }
             syncOptions = ["CreateNamespace=true"]
+            retry = {
+              limit = 5
+              backoff = {
+                duration    = "30s"
+                maxDuration = "2m"
+                factor      = 2
+              }
+            }
           }
         }
         "mario-central" = {
@@ -202,10 +210,19 @@ resource "helm_release" "mario_application" {
           }
           syncPolicy = {
             automated = {
-              prune    = true
-              selfHeal = true
+              prune      = true
+              selfHeal   = true
+              allowEmpty = false
             }
             syncOptions = ["CreateNamespace=true"]
+            retry = {
+              limit = 5
+              backoff = {
+                duration    = "30s"
+                maxDuration = "2m"
+                factor      = 2
+              }
+            }
           }
         }
         "mario-west" = {
@@ -233,10 +250,19 @@ resource "helm_release" "mario_application" {
           }
           syncPolicy = {
             automated = {
-              prune    = true
-              selfHeal = true
+              prune      = true
+              selfHeal   = true
+              allowEmpty = false
             }
             syncOptions = ["CreateNamespace=true"]
+            retry = {
+              limit = 5
+              backoff = {
+                duration    = "30s"
+                maxDuration = "2m"
+                factor      = 2
+              }
+            }
           }
         }
       }

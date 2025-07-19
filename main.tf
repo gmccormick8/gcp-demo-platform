@@ -96,7 +96,7 @@ module "gke_clusters" {
   min_node_count             = 1
   master_authorized_networks = [{ "cidr_block" : "0.0.0.0/0", "display_name" : "All IPs - For GitHub Actions" }]
   max_node_count             = 3
-  machine_type               = "e2-medium"
+  machine_type               = "e2-small"
   disk_size_gb               = 25
   disk_type                  = "pd-standard"
 

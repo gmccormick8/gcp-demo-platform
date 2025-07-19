@@ -70,6 +70,16 @@ resource "helm_release" "argocd" {
   ]
 }
 
+resource "kubernetes_config_map_v1" "argocd_cm" {
+  metadata {
+    name      = "argocd-cm"
+    namespace = "argocd"
+  }
+  data = {
+    "timeout.reconciliation" = "60s"
+  }
+}
+
 resource "kubernetes_secret" "argocd_east_cluster" {
   metadata {
     name      = "argocd-cluster-east"
@@ -172,17 +182,8 @@ resource "helm_release" "mario_application" {
             automated = {
               prune      = true
               selfHeal   = true
-              allowEmpty = false
             }
             syncOptions = ["CreateNamespace=true"]
-            retry = {
-              limit = 5
-              backoff = {
-                duration    = "30s"
-                maxDuration = "2m"
-                factor      = 2
-              }
-            }
           }
         }
         "mario-central" = {
@@ -212,17 +213,8 @@ resource "helm_release" "mario_application" {
             automated = {
               prune      = true
               selfHeal   = true
-              allowEmpty = false
             }
             syncOptions = ["CreateNamespace=true"]
-            retry = {
-              limit = 5
-              backoff = {
-                duration    = "30s"
-                maxDuration = "2m"
-                factor      = 2
-              }
-            }
           }
         }
         "mario-west" = {
@@ -252,17 +244,8 @@ resource "helm_release" "mario_application" {
             automated = {
               prune      = true
               selfHeal   = true
-              allowEmpty = false
             }
             syncOptions = ["CreateNamespace=true"]
-            retry = {
-              limit = 5
-              backoff = {
-                duration    = "30s"
-                maxDuration = "2m"
-                factor      = 2
-              }
-            }
           }
         }
       }

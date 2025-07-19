@@ -61,9 +61,17 @@ if [ ${#ARGOCD_PASSWORD} -lt 8 ]; then
   exit 1
 fi
 
+# Create ArgoCD admin password in Secret Manager
+echo "Creating ArgoCD admin password in Secret Manager..."
+echo -n "$ARGOCD_PASSWORD" | gcloud secrets create "argocd-admin-password-${BRANCH}" \
+  --replication-policy="automatic" \
+  --data-file=- \
+  --project="$PROJECT_ID"
+
 # Main script logic
 echo "Step 1/5: Enabling required APIs..."
 api_array=(
+  "secretmanager.googleapis.com"
   "compute.googleapis.com"
   "iam.googleapis.com"
   "iamcredentials.googleapis.com"
@@ -72,7 +80,6 @@ api_array=(
   "container.googleapis.com"
   "gkehub.googleapis.com"
   "anthos.googleapis.com"
-  "secretmanager.googleapis.com"
   "serviceusage.googleapis.com"
   "multiclusteringress.googleapis.com"
   "multiclusterservicediscovery.googleapis.com"

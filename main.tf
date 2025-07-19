@@ -96,7 +96,7 @@ module "gke_clusters" {
   min_node_count             = 1
   master_authorized_networks = [{ "cidr_block" : "0.0.0.0/0", "display_name" : "All IPs - For GitHub Actions" }]
   max_node_count             = 3
-  machine_type               = "e2-small"
+  machine_type               = "e2-standard-4"
   disk_size_gb               = 25
   disk_type                  = "pd-standard"
 
@@ -136,6 +136,46 @@ resource "google_gke_hub_feature" "mci" {
   ]
 }
 
+resource "kubernetes_namespace" "argocd" {
+  metadata {
+    name = "argocd"
+  }
+
+  depends_on = [google_gke_hub_feature.mci, google_gke_hub_feature.mcs]
+}
+
+resource "kubernetes_namespace" "mario" {
+  metadata {
+    name = "mario"
+  }
+
+  depends_on = [kubernetes_namespace.argocd]
+}
+
+module "argocd_central" {
+  source          = "./modules/argocd"
+  project_id      = var.project_id
+  gcp_sa_name     = "argocd-central-gcp-sa"
+  k8s_sa_name     = "argocd-central-k8s-sa"
+  namespace       = kubernetes_namespace.argocd.metadata[0].name
+  environment     = var.environment
+  gitops_repo_url = "https://github.com/gmccormick8/gcp-demo-app.git"
+
+  central_cluster_endpoint       = module.gke_clusters["central"].cluster_endpoint
+  central_cluster_ca_certificate = module.gke_clusters["central"].master_auth.cluster_ca_certificate
+  central_access_token           = data.google_client_config.default.access_token
+  central_region                 = local.clusters["central"].region
+
+  east_cluster_endpoint       = module.gke_clusters["east"].cluster_endpoint
+  east_cluster_ca_certificate = module.gke_clusters["east"].master_auth.cluster_ca_certificate
+  east_access_token           = data.google_client_config.default.access_token
+  east_region                 = local.clusters["east"].region
+
+  west_cluster_endpoint       = module.gke_clusters["west"].cluster_endpoint
+  west_cluster_ca_certificate = module.gke_clusters["west"].master_auth.cluster_ca_certificate
+  west_access_token           = data.google_client_config.default.access_token
+  west_region                 = local.clusters["west"].region
+}
 
 # Cleanup dynamically created firewall rules for GKE clusters
 resource "terraform_data" "gke_fw_cleanup" {
@@ -185,43 +225,41 @@ resource "terraform_data" "fleet_membership_cleanup" {
   }
 }
 
-resource "kubernetes_namespace" "argocd" {
-  metadata {
-    name = "argocd"
+# Cleanup automatically created Zonal NEGs
+resource "terraform_data" "neg_cleanup" {
+  triggers_replace = {
+    project_id = var.project_id
+    regions    = join(" ", [for cluster in local.clusters : cluster.region])
   }
 
-  depends_on = [google_gke_hub_feature.mci, google_gke_hub_feature.mcs]
-}
-
-resource "kubernetes_namespace" "mario" {
-  metadata {
-    name = "mario"
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<EOT
+      echo "Cleaning up Zonal NEGs..."
+      for REGION in ${self.triggers_replace.regions}; do
+        NEGS=$(gcloud compute network-endpoint-groups list \
+          --project=${self.triggers_replace.project_id} \
+          --filter="region:$REGION AND name~'^k8s'" \
+          --format="value(name)")
+        
+        if [ ! -z "$NEGS" ]; then
+          for NEG in $NEGS; do
+            echo "Deleting NEG: $NEG in $REGION"
+            gcloud compute network-endpoint-groups delete $NEG \
+              --project=${self.triggers_replace.project_id} \
+              --region=$REGION \
+              --quiet || true
+          done
+        else
+          echo "No matching NEGs found in $REGION"
+        fi
+      done
+    EOT
   }
 
-  depends_on = [kubernetes_namespace.argocd]
-}
-
-module "argocd_central" {
-  source          = "./modules/argocd"
-  project_id      = var.project_id
-  gcp_sa_name     = "argocd-central-gcp-sa"
-  k8s_sa_name     = "argocd-central-k8s-sa"
-  namespace       = kubernetes_namespace.argocd.metadata[0].name
-  environment     = var.environment
-  gitops_repo_url = "https://github.com/gmccormick8/gcp-demo-app.git"
-
-  central_cluster_endpoint       = module.gke_clusters["central"].cluster_endpoint
-  central_cluster_ca_certificate = module.gke_clusters["central"].master_auth.cluster_ca_certificate
-  central_access_token           = data.google_client_config.default.access_token
-  central_region                 = local.clusters["central"].region
-
-  east_cluster_endpoint       = module.gke_clusters["east"].cluster_endpoint
-  east_cluster_ca_certificate = module.gke_clusters["east"].master_auth.cluster_ca_certificate
-  east_access_token           = data.google_client_config.default.access_token
-  east_region                 = local.clusters["east"].region
-
-  west_cluster_endpoint       = module.gke_clusters["west"].cluster_endpoint
-  west_cluster_ca_certificate = module.gke_clusters["west"].master_auth.cluster_ca_certificate
-  west_access_token           = data.google_client_config.default.access_token
-  west_region                 = local.clusters["west"].region
+  depends_on = [
+    terraform_data.fleet_membership_cleanup,
+    google_gke_hub_feature.mci,
+    google_gke_hub_feature.mcs
+  ]
 }

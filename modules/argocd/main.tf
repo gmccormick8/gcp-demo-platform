@@ -4,6 +4,12 @@ resource "google_service_account" "argocd_gcp_sa" {
   project      = var.project_id
 }
 
+resource "google_project_iam_member" "argocd_secretmanager" {
+  project = var.project_id
+  role    = "roles/secretmanager.secretAccessor"
+  member  = "serviceAccount:${google_service_account.argocd_gcp_sa.email}"
+}
+
 resource "kubernetes_service_account" "argocd_k8s" {
   metadata {
     name      = var.k8s_sa_name
@@ -20,6 +26,11 @@ resource "google_service_account_iam_binding" "workload_identity_binding" {
   members            = ["serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/${kubernetes_service_account.argocd_k8s.metadata[0].name}]"]
 }
 
+data "google_secret_manager_secret_version" "argocd_admin_password" {
+  project = var.project_id
+  secret  = "argocd-admin-password-${var.environment}"
+}
+
 resource "helm_release" "argocd" {
   name       = "argocd"
   repository = "https://argoproj.github.io/argo-helm"
@@ -29,6 +40,11 @@ resource "helm_release" "argocd" {
 
   values = [
     yamlencode({
+      configs = {
+        secret = {
+          argocdServerAdminPassword = data.google_secret_manager_secret_version.argocd_admin_password.secret_data
+        }
+      }
       server : {
         serviceAccount : {
           create = false

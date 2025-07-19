@@ -180,8 +180,8 @@ resource "helm_release" "mario_application" {
           }
           syncPolicy = {
             automated = {
-              prune      = true
-              selfHeal   = true
+              prune    = true
+              selfHeal = true
             }
             syncOptions = ["CreateNamespace=true"]
           }
@@ -211,8 +211,8 @@ resource "helm_release" "mario_application" {
           }
           syncPolicy = {
             automated = {
-              prune      = true
-              selfHeal   = true
+              prune    = true
+              selfHeal = true
             }
             syncOptions = ["CreateNamespace=true"]
           }
@@ -242,8 +242,8 @@ resource "helm_release" "mario_application" {
           }
           syncPolicy = {
             automated = {
-              prune      = true
-              selfHeal   = true
+              prune    = true
+              selfHeal = true
             }
             syncOptions = ["CreateNamespace=true"]
           }

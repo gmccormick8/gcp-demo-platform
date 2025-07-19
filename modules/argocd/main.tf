@@ -20,18 +20,6 @@ resource "google_service_account_iam_binding" "workload_identity_binding" {
   members            = ["serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/${kubernetes_service_account.argocd_k8s.metadata[0].name}]"]
 }
 
-resource "google_service_account_iam_binding" "cluster_user_binding" {
-  service_account_id = google_service_account.argocd_gcp_sa.name
-  role               = "roles/container.clusterUser"
-  members            = ["serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/${kubernetes_service_account.argocd_k8s.metadata[0].name}]"]
-}
-
-resource "google_service_account_iam_binding" "cluster_admin_binding" {
-  service_account_id = google_service_account.argocd_gcp_sa.name
-  role               = "roles/container.clusterAdmin"
-  members            = ["serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/${kubernetes_service_account.argocd_k8s.metadata[0].name}]"]
-}
-
 resource "helm_release" "argocd" {
   name       = "argocd"
   repository = "https://argoproj.github.io/argo-helm"
@@ -178,7 +166,7 @@ resource "helm_release" "mario_application" {
             }
           }
           destination = {
-            server    = var.east_cluster_endpoint
+            server    = "https://${var.east_cluster_endpoint}"
             namespace = "mario"
           }
           syncPolicy = {
@@ -209,7 +197,7 @@ resource "helm_release" "mario_application" {
             }
           }
           destination = {
-            server    = var.central_cluster_endpoint
+            server    = "https://${var.central_cluster_endpoint}"
             namespace = "mario"
           }
           syncPolicy = {
@@ -240,7 +228,7 @@ resource "helm_release" "mario_application" {
             }
           }
           destination = {
-            server    = var.west_cluster_endpoint
+            server    = "https://${var.west_cluster_endpoint}"
             namespace = "mario"
           }
           syncPolicy = {

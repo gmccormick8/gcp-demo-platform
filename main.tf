@@ -225,6 +225,31 @@ resource "terraform_data" "fleet_membership_cleanup" {
   }
 }
 
+# Cleanup dynamically created forwarding rules
+resource "terraform_data" "forwarding_rule_cleanup" {
+  triggers_replace = {
+    project_id = var.project_id
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<EOT
+      echo "Cleaning up forwarding rules..."
+      RULES=$(gcloud compute forwarding-rules list --project=${self.triggers_replace.project_id} --format='value(name)')
+      if [ ! -z "$RULES" ]; then
+        for RULE in $RULES; do
+          echo "Deleting forwarding rule: $RULE"
+          gcloud compute forwarding-rules delete $RULE --project=${self.triggers_replace.project_id} --quiet
+        done
+      else
+        echo "No matching forwarding rules found to delete"
+      fi
+    EOT
+  }
+
+  depends_on = [module.demo-vpc]
+}
+
 # Cleanup automatically created Zonal NEGs
 resource "terraform_data" "neg_cleanup" {
   triggers_replace = {

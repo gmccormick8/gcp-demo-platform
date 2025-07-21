@@ -31,6 +31,14 @@ data "google_secret_manager_secret_version" "argocd_admin_password" {
   secret  = "argocd-admin-password-${var.environment}"
 }
 
+data "kubernetes_service" "argocd_server" {
+  metadata {
+    name      = "argocd-server"
+    namespace = var.namespace
+  }
+  depends_on = [helm_release.argocd]
+}
+
 resource "helm_release" "argocd" {
   name       = "argocd"
   repository = "https://argoproj.github.io/argo-helm"
@@ -42,7 +50,8 @@ resource "helm_release" "argocd" {
     yamlencode({
       configs = {
         secret = {
-          argocdServerAdminPassword = data.google_secret_manager_secret_version.argocd_admin_password.secret_data
+          # ArgoCD expects the password to be bcrypt hashed
+          argocdServerAdminPassword = "$2a$10$${data.google_secret_manager_secret_version.argocd_admin_password.secret_data}"
         }
       }
       server : {

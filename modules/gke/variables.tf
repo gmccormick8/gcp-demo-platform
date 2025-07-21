@@ -76,9 +76,3 @@ variable "master_authorized_networks" {
   }))
   default = []
 }
-
-variable "fw_tags" {
-  description = "Tags to apply to the firewall rules"
-  type        = list(string)
-  default     = []
-}

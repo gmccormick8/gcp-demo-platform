@@ -21,7 +21,6 @@ resource "google_project_iam_member" "gke_sa_container_admin_role" {
   member  = "serviceAccount:${google_service_account.gke_sa.email}"
 }
 
-# Create a Standard GKE cluster
 resource "google_container_cluster" "primary" {
   name     = var.cluster_name
   location = var.zone
@@ -109,8 +108,6 @@ resource "google_container_node_pool" "primary_nodes" {
       enable_secure_boot          = true
       enable_integrity_monitoring = true
     }
-
-    tags = var.fw_tags
   }
 
   network_config {

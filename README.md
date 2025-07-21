@@ -1,6 +1,25 @@
 # GCP Infrastructure Demo Platform
 
-This repository demonstrates a secure infrastructure deployment to Google Cloud Platform using Workload Identity Federation with GitHub Actions and Terraform.
+This repository demonstrates a secure infrastructure deployment to Google Cloud Platform using Workload Identity Federation with GitHub Actions and Terraform. It includes a multi-cluster GKE setup with ArgoCD for GitOps management.
+
+## Features
+
+- **Multi-Environment Infrastructure**
+  - Separate environments for dev, staging, and prod
+  - Environment-specific configurations and secrets
+  - Secure environment promotion pipeline
+
+- **Security First**
+  - Workload Identity Federation for keyless authentication
+  - Secret Manager integration for sensitive data
+  - Least privilege service accounts
+  - Secure ArgoCD password management
+
+- **GitOps Ready**
+  - ArgoCD pre-configured for multi-cluster management
+  - Secure password management via Secret Manager
+  - Automated cluster registration
+  - Multi-cluster service discovery enabled
 
 ## Prerequisites
 
@@ -68,38 +87,94 @@ This repository demonstrates a secure infrastructure deployment to Google Cloud 
 .
 ├── .github/
 │   └── workflows/
-│       └── deploy.yml      # GitHub Actions workflow
+│       ├── deploy.yml        # Deployment workflow
+│       └── destroy.yml       # Infrastructure cleanup workflow
+├── modules/
+│   ├── argocd/              # ArgoCD deployment module
+│   ├── gke/                 # GKE cluster module
+│   └── network/             # VPC network module
 ├── .gitignore
 ├── LICENSE
 ├── README.md
-├── init.sh                # Environment setup script
-├── main.tf               # Main Terraform configuration
-├── providers.tf          # Provider configuration
-└── variables.tf         # Variable definitions
+├── init.sh                  # Environment setup script
+├── main.tf                  # Main Terraform configuration
+├── outputs.tf               # Output definitions
+├── providers.tf             # Provider configuration
+└── variables.tf             # Variable definitions
 ```
 
 ## Security Features
 
-- Workload Identity Federation for keyless authentication
-- Environment-specific service accounts 
-- State bucket versioning enabled
-- Secure storage of ArgoCD admin password in Secret Manager
-- Required explicit password setting during initialization
+- **Authentication**
+  - Workload Identity Federation for keyless authentication
+  - Environment-specific service accounts
+  - ArgoCD password stored in Secret Manager
 
-## Accessing ArgoCD After Deployment
+- **State Management**
+  - Separate state buckets per environment
+  - State bucket versioning enabled
+  - Lifecycle policies for old versions
 
-After a successful deployment, you can access ArgoCD using the following steps:
+- **Access Control**
+  - Required manual approvals for prod changes
+  - Branch protection rules
+  - Least privilege service accounts
 
-1. Get the ArgoCD URL from the deployment outputs (shown in GitHub Actions summary)
-2. Retrieve the admin password from Secret Manager:
+## Password Management
+
+ArgoCD passwords are managed securely through Google Cloud Secret Manager:
+
+- One secret per environment (`argocd-admin-password-[env]`)
+- Access controlled via IAM
+- Password rotation supported
+- Audit logging enabled
+
+## Accessing ArgoCD
+
+After deployment:
+
+1. Get the ArgoCD URL from the deployment outputs (GitHub Actions summary)
+2. Retrieve the admin password:
    ```bash
-   gcloud secrets versions access latest --secret=argocd-admin-password --project=YOUR_PROJECT_ID
+   # Replace with your project ID and environment
+   gcloud secrets versions access latest \
+     --secret="argocd-admin-password-[env]" \
+     --project="[project-id]"
    ```
-3. Log in with username `admin` and the password retrieved from Secret Manager
-- Branch protection rules recommended
-- Separate environments with isolated state storage
+3. Log in with:
+   - Username: `admin`
+   - Password: Retrieved from Secret Manager
+
+## Contributing
+
+1. Create a feature branch from `dev`
+2. Make your changes
+3. Submit a PR to `dev`
+4. After approval, changes flow: dev → staging → prod
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
 - Environment-specific GitOps branches for configuration management
 - Intelligent approval process for infrastructure changes (see [Workflow Approvals](docs/workflow-approvals.md))
+
+## Deploying ArgoCD
+
+ArgoCD is deployed on all three clusters using the `terraform-helm-argocd` module. To configure the CI/CD user, set the `ci_cd_password` variable in your Terraform configuration.
+
+Example:
+
+```hcl
+variable "ci_cd_password" {
+  default = "SecurePassword123"
+}
+```
+
+Run the following command to deploy ArgoCD:
+
+```bash
+terraform apply
+```
 
 ## Contributing
 

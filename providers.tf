@@ -37,49 +37,7 @@ provider "google-beta" {
 data "google_client_config" "default" {}
 
 provider "kubernetes" {
-  alias                  = "central"
   host                   = "https://${module.gke_clusters["central"].cluster_endpoint}"
   token                  = data.google_client_config.default.access_token
   cluster_ca_certificate = base64decode(module.gke_clusters["central"].master_auth.cluster_ca_certificate)
-}
-
-provider "helm" {
-  alias = "central"
-  kubernetes {
-    host                   = "https://${module.gke_clusters["central"].cluster_endpoint}"
-    token                  = data.google_client_config.default.access_token
-    cluster_ca_certificate = base64decode(module.gke_clusters["central"].master_auth.cluster_ca_certificate)
-  }
-}
-
-provider "kubernetes" {
-  alias                  = "east"
-  host                   = "https://${module.gke_clusters["east"].cluster_endpoint}"
-  token                  = data.google_client_config.default.access_token
-  cluster_ca_certificate = base64decode(module.gke_clusters["east"].master_auth.cluster_ca_certificate)
-}
-
-provider "helm" {
-  alias = "east"
-  kubernetes {
-    host                   = "https://${module.gke_clusters["east"].cluster_endpoint}"
-    token                  = data.google_client_config.default.access_token
-    cluster_ca_certificate = base64decode(module.gke_clusters["east"].master_auth.cluster_ca_certificate)
-  }
-}
-
-provider "kubernetes" {
-  alias                  = "west"
-  host                   = "https://${module.gke_clusters["west"].cluster_endpoint}"
-  token                  = data.google_client_config.default.access_token
-  cluster_ca_certificate = base64decode(module.gke_clusters["west"].master_auth.cluster_ca_certificate)
-}
-
-provider "helm" {
-  alias = "west"
-  kubernetes {
-    host                   = "https://${module.gke_clusters["west"].cluster_endpoint}"
-    token                  = data.google_client_config.default.access_token
-    cluster_ca_certificate = base64decode(module.gke_clusters["west"].master_auth.cluster_ca_certificate)
-  }
 }

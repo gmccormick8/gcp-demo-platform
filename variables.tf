@@ -1,4 +1,11 @@
 variable "project_id" {
-  description = "The ID of the Google Cloud project."
+  description = "Project ID"
   type        = string
 }
+
+variable "environment" {
+  description = "Deployment environment (dev, staging, prod) - used for GitOps branch targeting"
+  type        = string
+  default     = "dev"
+}
+

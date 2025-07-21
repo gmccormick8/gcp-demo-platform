@@ -63,7 +63,7 @@ resource "helm_release" "argocd" {
       configs = {
         secret = {
           argocdServerAdminPassword = kubernetes_secret.argocd_admin_secret.data["admin.password"]
-          adminPasswordMtime       = kubernetes_secret.argocd_admin_secret.data["admin.passwordMtime"]
+          adminPasswordMtime        = kubernetes_secret.argocd_admin_secret.data["admin.passwordMtime"]
         }
       }
       server : {

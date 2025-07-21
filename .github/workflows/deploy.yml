@@ -2,10 +2,10 @@ name: Terraform Deploy Pipeline
 
 on:
   push:
-    branches: [dev]
-  pull_request:
-    branches: [staging, prod]
-    types: [closed]
+    branches:
+      - dev
+      - staging
+      - prod
   workflow_dispatch:
 
 jobs:

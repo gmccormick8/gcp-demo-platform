@@ -216,6 +216,7 @@ resource "terraform_data" "forwarding_rule_cleanup" {
         for RULE in $RULES; do
           echo "Deleting forwarding rule: $RULE"
           gcloud compute forwarding-rules delete $RULE --project=${self.triggers_replace.project_id} --global --quiet
+          sleep 15
         done
       else
         echo "No matching forwarding rules found to delete"
@@ -223,7 +224,7 @@ resource "terraform_data" "forwarding_rule_cleanup" {
     EOT
   }
 
-  depends_on = [ module.demo-vpc ]
+  depends_on = [module.demo-vpc]
 }
 
 # Cleanup dynamically created fleet memberships

@@ -61,13 +61,6 @@ if [ ${#ARGOCD_PASSWORD} -lt 8 ]; then
   exit 1
 fi
 
-# Create ArgoCD admin password in Secret Manager
-echo "Creating ArgoCD admin password in Secret Manager..."
-echo -n "$ARGOCD_PASSWORD" | gcloud secrets create "argocd-admin-password-${BRANCH}" \
-  --replication-policy="automatic" \
-  --data-file=- \
-  --project="$PROJECT_ID"
-
 # Main script logic
 echo "Step 1/5: Enabling required APIs..."
 api_array=(
@@ -232,25 +225,13 @@ rm /tmp/lifecycle-config.json
 # Set up ArgoCD admin password in Secret Manager
 echo "Step 5/5: Setting up ArgoCD admin password in Secret Manager..."
 
-
-# Create the secret in Secret Manager
-echo "Creating Secret Manager secret 'argocd-admin-password'..."
+# Create ArgoCD admin password in Secret Manager
+echo "Creating ArgoCD admin password in Secret Manager..."
 SECRET_NAME="argocd-admin-password-${BRANCH}"
-
-# Check if the secret already exists, if not create it
-if ! gcloud secrets describe "$SECRET_NAME" --project="$PROJECT_ID" &>/dev/null; then
-  gcloud secrets create "$SECRET_NAME" \
-    --project="$PROJECT_ID" \
-    --replication-policy="automatic" \
-    --labels="env=${BRANCH},app=argocd,managed-by=init-script"
-else
-  echo "Secret '$SECRET_NAME' already exists."
-fi
-
-# Add the password to the secret
-echo "Adding password to secret..."
-# Store the plaintext password - ArgoCD will handle the bcrypt hashing internally
-echo -n "$ARGOCD_PASSWORD" | gcloud secrets versions add "$SECRET_NAME" --data-file=- --project="$PROJECT_ID"
+echo -n "$ARGOCD_PASSWORD" | gcloud secrets create "$SECRET_NAME" \
+  --replication-policy="automatic" \
+  --data-file=- \
+  --project="$PROJECT_ID"
 
 echo "Note: Password stored as plaintext in Secret Manager. ArgoCD will hash it internally."
 

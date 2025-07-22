@@ -229,7 +229,7 @@ resource "terraform_data" "fleet_membership_cleanup" {
 resource "terraform_data" "neg_cleanup" {
   triggers_replace = {
     project_id = var.project_id
-    zones       = join(" ", [for cluster in local.clusters : cluster.zone])
+    zones       = [for cluster in local.clusters : cluster.zone]
   }
 
   provisioner "local-exec" {

@@ -201,32 +201,6 @@ resource "terraform_data" "gke_fw_cleanup" {
   depends_on = [module.demo-vpc]
 }
 
-# Cleanup dynamically created forwarding rules
-resource "terraform_data" "forwarding_rule_cleanup" {
-  triggers_replace = {
-    project_id = var.project_id
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<EOT
-      echo "Cleaning up forwarding rules..."
-      RULES=$(gcloud compute forwarding-rules list --project=${self.triggers_replace.project_id} --format='value(name)')
-      if [ ! -z "$RULES" ]; then
-        for RULE in $RULES; do
-          echo "Deleting forwarding rule: $RULE"
-          gcloud compute forwarding-rules delete $RULE --project=${self.triggers_replace.project_id} --global --quiet
-          sleep 15
-        done
-      else
-        echo "No matching forwarding rules found to delete"
-      fi
-    EOT
-  }
-
-  depends_on = [module.demo-vpc]
-}
-
 # Cleanup dynamically created fleet memberships
 resource "terraform_data" "fleet_membership_cleanup" {
   triggers_replace = {
@@ -288,4 +262,30 @@ resource "terraform_data" "neg_cleanup" {
     google_gke_hub_feature.mci,
     google_gke_hub_feature.mcs
   ]
+}
+
+# Cleanup dynamically created forwarding rules
+resource "terraform_data" "forwarding_rule_cleanup" {
+  triggers_replace = {
+    project_id = var.project_id
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<EOT
+      echo "Cleaning up forwarding rules..."
+      RULES=$(gcloud compute forwarding-rules list --project=${self.triggers_replace.project_id} --format='value(name)')
+      if [ ! -z "$RULES" ]; then
+        for RULE in $RULES; do
+          echo "Deleting forwarding rule: $RULE"
+          gcloud compute forwarding-rules delete $RULE --project=${self.triggers_replace.project_id} --global --quiet
+          sleep 15
+        done
+      else
+        echo "No matching forwarding rules found to delete"
+      fi
+    EOT
+  }
+
+  depends_on = [terraform_data.neg_cleanup]
 }

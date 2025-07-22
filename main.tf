@@ -236,24 +236,27 @@ resource "terraform_data" "neg_cleanup" {
     when    = destroy
     command = <<EOT
       echo "Cleaning up Zonal NEGs..."
-      for ZONE in ${self.triggers_replace.zones}; do
-        NEGS=$(gcloud compute network-endpoint-groups list \
-          --project=${self.triggers_replace.project_id} \
-          --zones=$ZONE \
-          --format="value(name)")
-        
-        if [ ! -z "$NEGS" ]; then
-          for NEG in $NEGS; do
-            echo "Deleting NEG: $NEG"
-            gcloud compute network-endpoint-groups delete $NEG \
-              --project=${self.triggers_replace.project_id} \
-              --zones=$ZONE \
-              --quiet || true
-          done
-        else
-          echo "No matching NEGs found in $ZONE"
-        fi
-      done
+      ZONES=${self.triggers_replace.zones}
+      if [ ! -z "$ZONES" ]; then
+        for ZONE in $ZONES; do
+          NEGS=$(gcloud compute network-endpoint-groups list \
+            --project=${self.triggers_replace.project_id} \
+            --zones=$ZONE \
+            --format="value(name)")
+          
+          if [ ! -z "$NEGS" ]; then
+            for NEG in $NEGS; do
+              echo "Deleting NEG: $NEG"
+              gcloud compute network-endpoint-groups delete $NEG \
+                --project=${self.triggers_replace.project_id} \
+                --zones=$ZONE \
+                --quiet || true
+            done
+          else
+            echo "No matching NEGs found in $ZONE"
+          fi
+        done
+      fi
     EOT
   }
 

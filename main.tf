@@ -229,21 +229,21 @@ resource "terraform_data" "fleet_membership_cleanup" {
 resource "terraform_data" "neg_cleanup" {
   triggers_replace = {
     project_id = var.project_id
-    zones      = join(" ", [for cluster in local.clusters : cluster.zone])
+    zones      = join(",", [for cluster in local.clusters : cluster.zone])
   }
 
   provisioner "local-exec" {
     when    = destroy
     command = <<EOT
       echo "Cleaning up Zonal NEGs..."
-      for ZONE in ${self.triggers_replace.zones}; do
+      for ZONE in range(len(${self.triggers_replace.zones})); do
         NEGS=$(gcloud compute network-endpoint-groups list \
           --project=${self.triggers_replace.project_id} \
           --zones=$ZONE \
           --format="value(name)")
         
         if [ ! -z "$NEGS" ]; then
-          for NEG in $NEGS; do
+          for NEG in range(len($NEGS)); do
             echo "Deleting NEG: $NEG"
             gcloud compute network-endpoint-groups delete $NEG \
               --project=${self.triggers_replace.project_id} \

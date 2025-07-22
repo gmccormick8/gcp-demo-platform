@@ -270,12 +270,18 @@ resource "terraform_data" "forwarding_rule_cleanup" {
     when    = destroy
     command = <<EOT
       echo "Cleaning up forwarding rules..."
-      RULES=$(gcloud compute forwarding-rules list --project=${self.triggers_replace.project_id} --format='value(name)')
+      RULES=$(gcloud compute forwarding-rules list \
+        --project=${self.triggers_replace.project_id} \
+        --format='value(name)')
+      
+      echo $RULES
       if [ ! -z "$RULES" ]; then
         for RULE in $RULES; do
           echo "Deleting forwarding rule: $RULE"
-          gcloud compute forwarding-rules delete $RULE --project=${self.triggers_replace.project_id} --global --quiet
-          sleep 15
+          gcloud compute forwarding-rules delete $RULE \
+            --project=${self.triggers_replace.project_id} \
+            --global \
+            --quiet || echo "Failed to delete forwarding rule: $RULE"
         done
       else
         echo "No matching forwarding rules found to delete"

@@ -36,12 +36,8 @@ This repository demonstrates a secure infrastructure deployment to Google Cloud 
    cd gcp-demo-platform
    ```
 
-2. Make the initialization script executable:
-   ```bash
-   chmod +x init.sh
-   ```
 
-3. Run the initialization script for each environment (password is required):
+2. Run the initialization script for each environment (password is required):
    ```bash
    # For production environment with ArgoCD password
    ./init.sh prod SecurePassword123
@@ -62,7 +58,7 @@ This repository demonstrates a secure infrastructure deployment to Google Cloud 
    - Creates an ArgoCD admin password in Secret Manager (using your provided password)
    - Outputs all necessary GitHub secrets
 
-4. Configure GitHub environments:
+3. Configure GitHub environments:
    - Create environments for `dev`, `staging`, and `prod`
    - Add the secrets output by the script to each environment:
      - `PROJECT_ID`     - `WORKLOAD_IDENTITY_PROVIDER`
@@ -160,21 +156,32 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 
 ## Deploying ArgoCD
 
-ArgoCD is deployed on all three clusters using the `terraform-helm-argocd` module. To configure the CI/CD user, set the `ci_cd_password` variable in your Terraform configuration.
+ArgoCD is deployed automatically across all clusters during the Terraform apply process. The admin password is managed securely through Google Cloud Secret Manager and is unique for each environment (dev/staging/prod).
 
-Example:
+The password is:
+- Generated during initial setup by the `init.sh` script
+- Stored in Secret Manager as `argocd-admin-password-[env]`
+- Retrieved automatically by the ArgoCD module during deployment
+- Never exposed in Terraform configuration or state files
 
-```hcl
-variable "ci_cd_password" {
-  default = "SecurePassword123"
-}
-```
+To deploy ArgoCD and the entire infrastructure:
 
-Run the following command to deploy ArgoCD:
+1. Initialize Terraform:
+   ```bash
+   terraform init -backend-config="bucket=$TF_STATE_BUCKET"
+   ```
 
-```bash
-terraform apply
-```
+2. Review the changes:
+   ```bash
+   terraform plan
+   ```
+
+3. Apply the configuration:
+   ```bash
+   terraform apply
+   ```
+
+The deployment process is automated through GitHub Actions workflows in the `.github/workflows/deploy.yml` file, which handles environment-specific deployments when changes are pushed to the corresponding branches (dev/staging/prod).
 
 ## Contributing
 

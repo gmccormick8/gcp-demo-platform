@@ -232,11 +232,7 @@ resource "terraform_data" "neg_cleanup" {
   }
 
   input = {
-    zones = join(" ", [
-      local.clusters["east"].zone,
-      local.clusters["central"].zone,
-      local.clusters["west"].zone
-    ])
+    zones = join(" ", [for cluster in local.clusters : cluster.zone])
   }
 
   provisioner "local-exec" {

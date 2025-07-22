@@ -229,7 +229,7 @@ resource "terraform_data" "fleet_membership_cleanup" {
 resource "terraform_data" "neg_cleanup" {
   triggers_replace = {
     project_id = var.project_id
-    zone = join(",", [for cluster in local.clusters : cluster.value.zone])
+    zone       = join(",", [for cluster in local.clusters : cluster.value.zone])
   }
 
   provisioner "local-exec" {
@@ -257,7 +257,7 @@ resource "terraform_data" "neg_cleanup" {
     EOT
   }
 
-  depends_on = [ module.demo-vpc ]
+  depends_on = [module.demo-vpc]
 }
 
 # Cleanup dynamically created forwarding rules
@@ -289,5 +289,5 @@ resource "terraform_data" "forwarding_rule_cleanup" {
     EOT
   }
 
-  depends_on = [ module.demo-vpc ]
+  depends_on = [module.demo-vpc]
 }

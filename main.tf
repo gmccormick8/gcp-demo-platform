@@ -79,6 +79,8 @@ module "demo-vpc" {
   }
 
   cloud_nat_configs = ["us-east5", "us-central1", "us-west4"]
+
+  depends_on = [ terraform_data.forwarding_rule_cleanup, terraform_data.neg_cleanup ]
 }
 
 module "gke_clusters" {

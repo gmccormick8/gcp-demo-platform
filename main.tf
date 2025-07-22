@@ -239,7 +239,7 @@ resource "terraform_data" "neg_cleanup" {
       for ZONE in ${self.triggers_replace.zones}; do
         NEGS=$(gcloud compute network-endpoint-groups list \
           --project=${self.triggers_replace.project_id} \
-          --zone=$ZONE \
+          --zones=$ZONE \
           --format="value(name)")
         
         if [ ! -z "$NEGS" ]; then
@@ -247,7 +247,7 @@ resource "terraform_data" "neg_cleanup" {
             echo "Deleting NEG: $NEG"
             gcloud compute network-endpoint-groups delete $NEG \
               --project=${self.triggers_replace.project_id} \
-              --zone=$ZONE \
+              --zones=$ZONE \
               --quiet || true
           done
         else

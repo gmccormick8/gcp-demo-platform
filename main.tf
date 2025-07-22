@@ -229,29 +229,29 @@ resource "terraform_data" "fleet_membership_cleanup" {
 resource "terraform_data" "neg_cleanup" {
   triggers_replace = {
     project_id = var.project_id
-    regions    = join(" ", [for cluster in local.clusters : cluster.region])
+    zone = join(",", [for cluster in local.clusters : cluster.value.zone])
   }
 
   provisioner "local-exec" {
     when    = destroy
     command = <<EOT
       echo "Cleaning up Zonal NEGs..."
-      for REGION in ${self.triggers_replace.regions}; do
+      for ZONE in ${self.triggers_replace.zones}; do
         NEGS=$(gcloud compute network-endpoint-groups list \
           --project=${self.triggers_replace.project_id} \
-          --filter="region:$REGION AND name~'^k8s'" \
+          --zone=$ZONE \
           --format="value(name)")
         
         if [ ! -z "$NEGS" ]; then
           for NEG in $NEGS; do
-            echo "Deleting NEG: $NEG in $REGION"
+            echo "Deleting NEG: $NEG"
             gcloud compute network-endpoint-groups delete $NEG \
               --project=${self.triggers_replace.project_id} \
-              --region=$REGION \
+              --zone=$ZONE \
               --quiet || true
           done
         else
-          echo "No matching NEGs found in $REGION"
+          echo "No matching NEGs found in $ZONE"
         fi
       done
     EOT

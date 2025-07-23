@@ -193,11 +193,11 @@ resource "kubernetes_secret" "argocd_central_cluster" {
 }
 
 resource "helm_release" "mario_apps" {
-  name             = "mario-apps"
-  repository       = "https://argoproj.github.io/argo-helm"
-  chart            = "argocd-apps"
-  namespace        = var.namespace
-  version          = "2.0.2"
+  name       = "mario-apps"
+  repository = "https://argoproj.github.io/argo-helm"
+  chart      = "argocd-apps"
+  namespace  = var.namespace
+  version    = "2.0.2"
 
   values = [local.rendered_values]
 

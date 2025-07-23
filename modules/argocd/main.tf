@@ -199,14 +199,14 @@ resource "helm_release" "mario_application" {
             targetRevision = var.environment
             path           = "helm/mario"
             helm = {
-              values = yamlencode({
+              values = {
                 gateway = {
                   enable = false
                 }
                 global = {
                   environment = var.environment
                 }
-              })
+              }
             }
           }
           destination = {
@@ -230,14 +230,14 @@ resource "helm_release" "mario_application" {
             targetRevision = var.environment
             path           = "helm/mario"
             helm = {
-              values = yamlencode({
+              values = {
                 gateway = {
                   enable = true
                 }
                 global = {
                   environment = var.environment
                 }
-              })
+              }
             }
           }
           destination = {
@@ -261,14 +261,14 @@ resource "helm_release" "mario_application" {
             targetRevision = var.environment
             path           = "helm/mario"
             helm = {
-              values = yamlencode({
+              values = {
                 gateway = {
                   enable = false
                 }
                 global = {
                   environment = var.environment
                 }
-              })
+              }
             }
           }
           destination = {

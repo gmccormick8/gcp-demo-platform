@@ -225,41 +225,7 @@ resource "terraform_data" "fleet_membership_cleanup" {
   }
 }
 
-resource "terraform_data" "argocd_cleanup" {
-  triggers_replace = {
-    cluster_context = var.environment
-  }
 
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<EOT
-    #!/bin/bash
-    set -e
-
-    echo "Cleaning up ArgoCD CRDs and Services..."
-
-    # Uninstall ArgoCD Helm release
-    helm uninstall argocd -n argocd || true
-
-    # Delete ArgoCD CRDs manually
-    kubectl delete crd applications.argoproj.io || true
-    kubectl delete crd applicationsets.argoproj.io || true
-    kubectl delete crd appprojects.argoproj.io || true
-
-    # Delete LoadBalancer service (if still exists)
-    kubectl delete svc argocd-server -n argocd || true
-
-    # Wait a bit for GCP resources to release
-    echo "Sleeping to let GCP release NEGs and forwarding rules..."
-    sleep 60
-    EOT
-  }
-
-  depends_on = [
-    module.gke_cluster,
-    helm_release.argocd
-  ]
-}
 
 
 

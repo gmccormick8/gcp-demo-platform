@@ -111,6 +111,10 @@ resource "google_gke_hub_feature" "mcs" {
   project  = var.project_id
   location = "global"
 
+  lifecycle {
+    prevent_destroy = false
+  }
+
   depends_on = [
     module.gke_clusters,
     terraform_data.fleet_membership_cleanup
@@ -128,6 +132,10 @@ resource "google_gke_hub_feature" "mci" {
     multiclusteringress {
       config_membership = "projects/${var.project_id}/locations/${local.clusters["central"].region}/memberships/${module.gke_clusters["central"].cluster_name}"
     }
+  }
+
+  lifecycle {
+    prevent_destroy = false
   }
 
   depends_on = [
@@ -211,8 +219,8 @@ resource "terraform_data" "fleet_membership_cleanup" {
       done
 
       # Wait for unregistration to complete
-      echo "Waiting 90 seconds for fleet unregistration to complete..."
-      sleep 90
+      echo "Waiting 180 seconds for fleet unregistration to complete..."
+      sleep 180
     EOT
   }
 }

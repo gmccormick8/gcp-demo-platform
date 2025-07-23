@@ -2,6 +2,7 @@ locals {
   rendered_values = templatefile("${path.module}/values.yaml.tpl", {
     gitops_repo_url          = var.gitops_repo_url
     environment              = var.environment
+    namespace                = var.namespace
     app_namespace            = var.app_namespace
     east_cluster_endpoint    = var.east_cluster_endpoint
     central_cluster_endpoint = var.central_cluster_endpoint

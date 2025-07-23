@@ -1,7 +1,7 @@
 applications:
   mario-east:
     name: mario-east
-    namespace: ${app_namespace}
+    namespace: ${namespace}
     project: default
     source:
       repoURL: ${gitops_repo_url}
@@ -25,7 +25,7 @@ applications:
 
   mario-central:
     name: mario-central
-    namespace: ${app_namespace}
+    namespace: ${namespace}
     project: default
     source:
       repoURL: ${gitops_repo_url}
@@ -49,7 +49,7 @@ applications:
 
   mario-west:
     name: mario-west
-    namespace: ${app_namespace}
+    namespace: ${namespace}
     project: default
     source:
       repoURL: ${gitops_repo_url}

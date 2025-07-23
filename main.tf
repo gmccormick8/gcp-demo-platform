@@ -79,8 +79,6 @@ module "demo-vpc" {
   }
 
   cloud_nat_configs = ["us-east5", "us-central1", "us-west4"]
-
-  depends_on = [terraform_data.forwarding_rule_cleanup, terraform_data.neg_cleanup]
 }
 
 module "gke_clusters" {
@@ -231,33 +229,19 @@ resource "terraform_data" "fleet_membership_cleanup" {
 resource "terraform_data" "neg_cleanup" {
   triggers_replace = {
     project_id = var.project_id
-    regions    = join(" ", [for cluster in local.clusters : cluster.region])
   }
 
   provisioner "local-exec" {
     when    = destroy
     command = <<EOT
-      echo "Cleaning up Zonal NEGs..."
-      for REGION in ${self.triggers_replace.regions}; do
-        NEGS=$(gcloud compute network-endpoint-groups list \
-          --project=${self.triggers_replace.project_id} \
-          --filter="region:$REGION AND name~'^k8s'" \
-          --format="value(name)")
-        
-        if [ ! -z "$NEGS" ]; then
-          for NEG in $NEGS; do
-            echo "Deleting NEG: $NEG in $REGION"
-            gcloud compute network-endpoint-groups delete $NEG \
-              --project=${self.triggers_replace.project_id} \
-              --region=$REGION \
-              --quiet || true
-          done
-        else
-          echo "No matching NEGs found in $REGION"
-        fi
+      echo "Cleaning up Network Endpoint Groups (NEGs)..."
+      gcloud compute network-endpoint-groups list --format="value(name,zone)" | while read -r name zone; do
+        gcloud compute network-endpoint-groups delete "$name" --zone="$zone" --quiet --project=${self.triggers_replace.project_id} || echo "Failed to delete NEG: $name in zone: $zone"
       done
     EOT
   }
+
+  depends_on = [module.demo-vpc]
 }
 
 # Cleanup dynamically created forwarding rules
@@ -270,16 +254,24 @@ resource "terraform_data" "forwarding_rule_cleanup" {
     when    = destroy
     command = <<EOT
       echo "Cleaning up forwarding rules..."
-      RULES=$(gcloud compute forwarding-rules list --project=${self.triggers_replace.project_id} --format='value(name)')
+      RULES=$(gcloud compute forwarding-rules list \
+        --project=${self.triggers_replace.project_id} \
+        --format='value(name)')
+      
+      echo $RULES
       if [ ! -z "$RULES" ]; then
         for RULE in $RULES; do
           echo "Deleting forwarding rule: $RULE"
-          gcloud compute forwarding-rules delete $RULE --project=${self.triggers_replace.project_id} --global --quiet
-          sleep 15
+          gcloud compute forwarding-rules delete $RULE \
+            --project=${self.triggers_replace.project_id} \
+            --global \
+            --quiet || echo "Failed to delete forwarding rule: $RULE"
         done
       else
         echo "No matching forwarding rules found to delete"
       fi
     EOT
   }
+
+  depends_on = [module.demo-vpc]
 }

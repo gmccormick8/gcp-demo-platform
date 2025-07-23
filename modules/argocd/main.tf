@@ -251,7 +251,7 @@ resource "helm_release" "mario_application" {
             }
             syncOptions = ["CreateNamespace=false"]
           }
-        }, 
+        },
         {
           name      = "mario-west"
           namespace = var.app_namespace

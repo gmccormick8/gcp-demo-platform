@@ -188,7 +188,7 @@ resource "helm_release" "mario_application" {
   create_namespace = false
 
   values = [
-    yamlencode({
+    {
       applications = {
         "mario-east" = {
           name      = "mario-east"
@@ -199,14 +199,14 @@ resource "helm_release" "mario_application" {
             targetRevision = var.environment
             path           = "helm/mario"
             helm = {
-              values = {
+              values = yamlencode({
                 gateway = {
                   enable = false
                 }
                 global = {
                   environment = var.environment
                 }
-              }
+              })
             }
           }
           destination = {
@@ -230,14 +230,14 @@ resource "helm_release" "mario_application" {
             targetRevision = var.environment
             path           = "helm/mario"
             helm = {
-              values = {
+              values = yamlencode({
                 gateway = {
                   enable = true
                 }
                 global = {
                   environment = var.environment
                 }
-              }
+              })
             }
           }
           destination = {
@@ -261,14 +261,14 @@ resource "helm_release" "mario_application" {
             targetRevision = var.environment
             path           = "helm/mario"
             helm = {
-              values = {
+              values = yamlencode({
                 gateway = {
                   enable = false
                 }
                 global = {
                   environment = var.environment
                 }
-              }
+              })
             }
           }
           destination = {
@@ -284,7 +284,7 @@ resource "helm_release" "mario_application" {
           }
         }
       }
-    })
+    }
   ]
 
   depends_on = [

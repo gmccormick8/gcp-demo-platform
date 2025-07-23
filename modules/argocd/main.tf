@@ -1,3 +1,14 @@
+locals {
+  rendered_values = templatefile("${path.module}/values.yaml.tpl", {
+    gitops_repo_url          = var.gitops_repo_url
+    environment              = var.environment
+    app_namespace            = var.app_namespace
+    east_cluster_endpoint    = var.east_cluster_endpoint
+    central_cluster_endpoint = var.central_cluster_endpoint
+    west_cluster_endpoint    = var.west_cluster_endpoint
+  })
+}
+
 resource "google_service_account" "argocd_gcp_sa" {
   account_id   = var.gcp_sa_name
   display_name = "ArgoCD Workload Identity SA"
@@ -180,112 +191,15 @@ resource "kubernetes_secret" "argocd_central_cluster" {
   depends_on = [helm_release.argocd]
 }
 
-resource "helm_release" "mario_application" {
+resource "helm_release" "mario_apps" {
   name             = "mario-apps"
   repository       = "https://argoproj.github.io/argo-helm"
   chart            = "argocd-apps"
   namespace        = var.namespace
   create_namespace = false
+  version          = "2.0.2"
 
-  values = [
-    yamlencode({
-      applications = {
-        "mario-east" = {
-          name      = "mario-east"
-          namespace = var.app_namespace
-          project   = "default"
-          source = {
-            repoURL        = var.gitops_repo_url
-            targetRevision = var.environment
-            path           = "helm/mario"
-            helm = {
-              values = yamlencode({
-                gateway = {
-                  enable = false
-                }
-                global = {
-                  environment = var.environment
-                }
-              })
-            }
-          }
-          destination = {
-            server    = "https://${var.east_cluster_endpoint}"
-            namespace = var.app_namespace
-          }
-          syncPolicy = {
-            automated = {
-              prune    = true
-              selfHeal = true
-            }
-            syncOptions = ["CreateNamespace=false"]
-          }
-        }
-        "mario-central" = {
-          name      = "mario-central"
-          namespace = var.app_namespace
-          project   = "default"
-          source = {
-            repoURL        = var.gitops_repo_url
-            targetRevision = var.environment
-            path           = "helm/mario"
-            helm = {
-              values = yamlencode({
-                gateway = {
-                  enable = true
-                }
-                global = {
-                  environment = var.environment
-                }
-              })
-            }
-          }
-          destination = {
-            server    = "https://${var.central_cluster_endpoint}"
-            namespace = var.app_namespace
-          }
-          syncPolicy = {
-            automated = {
-              prune    = true
-              selfHeal = true
-            }
-            syncOptions = ["CreateNamespace=false"]
-          }
-        }
-        "mario-west" = {
-          name      = "mario-west"
-          namespace = var.app_namespace
-          project   = "default"
-          source = {
-            repoURL        = var.gitops_repo_url
-            targetRevision = var.environment
-            path           = "helm/mario"
-            helm = {
-              values = yamlencode({
-                gateway = {
-                  enable = false
-                }
-                global = {
-                  environment = var.environment
-                }
-              })
-            }
-          }
-          destination = {
-            server    = "https://${var.west_cluster_endpoint}"
-            namespace = var.app_namespace
-          }
-          syncPolicy = {
-            automated = {
-              prune    = true
-              selfHeal = true
-            }
-            syncOptions = ["CreateNamespace=false"]
-          }
-        }
-      }
-    })
-  ]
+  values = [local.rendered_values]
 
   depends_on = [
     helm_release.argocd,

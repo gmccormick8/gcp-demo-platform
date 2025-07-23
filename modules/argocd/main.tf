@@ -184,7 +184,7 @@ resource "helm_release" "mario_application" {
   name             = "mario-apps"
   repository       = "https://argoproj.github.io/argo-helm"
   chart            = "argocd-apps"
-  namespace        = var.app_namespace
+  namespace        = var.namespace
   create_namespace = false
 
   values = [

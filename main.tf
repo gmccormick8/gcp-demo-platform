@@ -147,6 +147,9 @@ resource "kubernetes_namespace" "argocd" {
 resource "kubernetes_namespace" "mario" {
   metadata {
     name = "mario"
+    labels = {
+      app = "mario"
+    }
   }
 
   depends_on = [kubernetes_namespace.argocd]
@@ -158,6 +161,7 @@ module "argocd_central" {
   gcp_sa_name     = "argocd-central-gcp-sa"
   k8s_sa_name     = "argocd-central-k8s-sa"
   namespace       = kubernetes_namespace.argocd.metadata[0].name
+  app_namespace   = kubernetes_namespace.mario.metadata[0].name
   environment     = var.environment
   gitops_repo_url = "https://github.com/gmccormick8/gcp-demo-app.git"
 
@@ -223,55 +227,4 @@ resource "terraform_data" "fleet_membership_cleanup" {
       sleep 90
     EOT
   }
-}
-
-# Cleanup automatically created Zonal NEGs
-resource "terraform_data" "neg_cleanup" {
-  triggers_replace = {
-    project_id = var.project_id
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<EOT
-      echo "Cleaning up Network Endpoint Groups (NEGs)..."
-      gcloud compute network-endpoint-groups list --format="value(name,zone)" | while read -r name zone; do
-        gcloud compute network-endpoint-groups delete "$name" --zone="$zone" --quiet --project=${self.triggers_replace.project_id} || echo "Failed to delete NEG: $name in zone: $zone"
-      done
-    EOT
-  }
-
-  depends_on = [module.demo-vpc]
-}
-
-# Cleanup dynamically created forwarding rules
-resource "terraform_data" "forwarding_rule_cleanup" {
-  triggers_replace = {
-    project_id = var.project_id
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<EOT
-      echo "Cleaning up forwarding rules..."
-      RULES=$(gcloud compute forwarding-rules list \
-        --project=${self.triggers_replace.project_id} \
-        --format='value(name)')
-      
-      echo $RULES
-      if [ ! -z "$RULES" ]; then
-        for RULE in $RULES; do
-          echo "Deleting forwarding rule: $RULE"
-          gcloud compute forwarding-rules delete $RULE \
-            --project=${self.triggers_replace.project_id} \
-            --global \
-            --quiet || echo "Failed to delete forwarding rule: $RULE"
-        done
-      else
-        echo "No matching forwarding rules found to delete"
-      fi
-    EOT
-  }
-
-  depends_on = [module.demo-vpc]
 }

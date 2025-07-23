@@ -181,17 +181,18 @@ resource "kubernetes_secret" "argocd_central_cluster" {
 }
 
 resource "helm_release" "mario_application" {
-  name       = "mario-apps"
-  repository = "https://argoproj.github.io/argo-helm"
-  chart      = "argocd-apps"
-  namespace  = var.namespace
+  name             = "mario-apps"
+  repository       = "https://argoproj.github.io/argo-helm"
+  chart            = "argocd-apps"
+  namespace        = var.app_namespace
+  create_namespace = false
 
   values = [
     yamlencode({
       applications = {
         "mario-east" = {
           name      = "mario-east"
-          namespace = var.namespace
+          namespace = var.app_namespace
           project   = "default"
           source = {
             repoURL        = var.gitops_repo_url
@@ -210,19 +211,19 @@ resource "helm_release" "mario_application" {
           }
           destination = {
             server    = "https://${var.east_cluster_endpoint}"
-            namespace = "mario"
+            namespace = var.app_namespace
           }
           syncPolicy = {
             automated = {
               prune    = true
               selfHeal = true
             }
-            syncOptions = ["CreateNamespace=true"]
+            syncOptions = ["CreateNamespace=false"]
           }
         }
         "mario-central" = {
           name      = "mario-central"
-          namespace = var.namespace
+          namespace = var.app_namespace
           project   = "default"
           source = {
             repoURL        = var.gitops_repo_url
@@ -241,19 +242,19 @@ resource "helm_release" "mario_application" {
           }
           destination = {
             server    = "https://${var.central_cluster_endpoint}"
-            namespace = "mario"
+            namespace = var.app_namespace
           }
           syncPolicy = {
             automated = {
               prune    = true
               selfHeal = true
             }
-            syncOptions = ["CreateNamespace=true"]
+            syncOptions = ["CreateNamespace=false"]
           }
         }
         "mario-west" = {
           name      = "mario-west"
-          namespace = var.namespace
+          namespace = var.app_namespace
           project   = "default"
           source = {
             repoURL        = var.gitops_repo_url
@@ -272,14 +273,14 @@ resource "helm_release" "mario_application" {
           }
           destination = {
             server    = "https://${var.west_cluster_endpoint}"
-            namespace = "mario"
+            namespace = var.app_namespace
           }
           syncPolicy = {
             automated = {
               prune    = true
               selfHeal = true
             }
-            syncOptions = ["CreateNamespace=true"]
+            syncOptions = ["CreateNamespace=false"]
           }
         }
       }
@@ -292,37 +293,4 @@ resource "helm_release" "mario_application" {
     kubernetes_secret.argocd_west_cluster,
     kubernetes_secret.argocd_central_cluster
   ]
-}
-
-# Clean up ArgoCD resources
-resource "terraform_data" "argocd_cleanup" {
-  triggers_replace = {
-    cluster_context = var.environment
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<EOT
-    #!/bin/bash
-    set -e
-
-    echo "Cleaning up ArgoCD CRDs and Services..."
-
-    sleep 30
-
-    # Delete ArgoCD CRDs manually
-    kubectl delete crd applications.argoproj.io || true
-    kubectl delete crd applicationsets.argoproj.io || true
-    kubectl delete crd appprojects.argoproj.io || true
-
-    # Delete LoadBalancer service (if still exists)
-    kubectl delete svc argocd-server -n argocd || true
-
-    # Wait a bit for GCP resources to release
-    echo "Sleeping to let GCP release NEGs and forwarding rules..."
-    sleep 60
-    EOT
-  }
-
-  depends_on = [helm_release.argocd]
 }

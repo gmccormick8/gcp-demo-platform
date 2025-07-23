@@ -188,9 +188,9 @@ resource "helm_release" "mario_application" {
   create_namespace = false
 
   values = [
-    {
-      applications = {
-        "mario-east" = {
+    yamlencode({
+      applications = [
+        {
           name      = "mario-east"
           namespace = var.app_namespace
           project   = "default"
@@ -220,8 +220,8 @@ resource "helm_release" "mario_application" {
             }
             syncOptions = ["CreateNamespace=false"]
           }
-        }
-        "mario-central" = {
+        },
+        {
           name      = "mario-central"
           namespace = var.app_namespace
           project   = "default"
@@ -251,8 +251,8 @@ resource "helm_release" "mario_application" {
             }
             syncOptions = ["CreateNamespace=false"]
           }
-        }
-        "mario-west" = {
+        }, 
+        {
           name      = "mario-west"
           namespace = var.app_namespace
           project   = "default"
@@ -283,8 +283,8 @@ resource "helm_release" "mario_application" {
             syncOptions = ["CreateNamespace=false"]
           }
         }
-      }
-    }
+      ]
+    })
   ]
 
   depends_on = [

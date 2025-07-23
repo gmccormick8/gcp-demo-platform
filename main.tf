@@ -225,11 +225,6 @@ resource "terraform_data" "fleet_membership_cleanup" {
   }
 }
 
-
-
-
-
-/*
 # Cleanup automatically created Zonal NEGs
 resource "terraform_data" "neg_cleanup" {
   triggers_replace = {
@@ -280,4 +275,3 @@ resource "terraform_data" "forwarding_rule_cleanup" {
 
   depends_on = [module.demo-vpc]
 }
-*/

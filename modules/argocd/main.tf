@@ -3,7 +3,7 @@ locals {
     gitops_repo_url          = var.gitops_repo_url
     environment              = var.environment
     namespace                = var.namespace
-    app_namespace            = var.app_namespace
+    app_namespace            = "mario"
     east_cluster_endpoint    = var.east_cluster_endpoint
     central_cluster_endpoint = var.central_cluster_endpoint
     west_cluster_endpoint    = var.west_cluster_endpoint
@@ -197,7 +197,6 @@ resource "helm_release" "mario_apps" {
   repository       = "https://argoproj.github.io/argo-helm"
   chart            = "argocd-apps"
   namespace        = var.namespace
-  create_namespace = false
   version          = "2.0.2"
 
   values = [local.rendered_values]

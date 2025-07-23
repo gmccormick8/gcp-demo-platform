@@ -18,11 +18,6 @@ variable "namespace" {
   type        = string
 }
 
-variable "app_namespace" {
-  description = "Namespace for ArgoCD applications"
-  type        = string
-}
-
 variable "environment" {
   description = "The environment for which the ArgoCD module is being configured"
   type        = string

@@ -21,7 +21,7 @@ applications:
         prune: true
         selfHeal: true
       syncOptions:
-        - CreateNamespace=false
+        - CreateNamespace=true
 
   mario-central:
     name: mario-central
@@ -45,7 +45,7 @@ applications:
         prune: true
         selfHeal: true
       syncOptions:
-        - CreateNamespace=false
+        - CreateNamespace=true
 
   mario-west:
     name: mario-west
@@ -69,4 +69,4 @@ applications:
         prune: true
         selfHeal: true
       syncOptions:
-        - CreateNamespace=false
+        - CreateNamespace=true

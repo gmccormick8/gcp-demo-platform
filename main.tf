@@ -96,7 +96,7 @@ module "gke_clusters" {
   min_node_count             = 1
   master_authorized_networks = [{ "cidr_block" : "0.0.0.0/0", "display_name" : "All IPs - For GitHub Actions" }]
   max_node_count             = 3
-  machine_type               = "e2-standard-4"
+  machine_type               = "e2-small"
   disk_size_gb               = 25
   disk_type                  = "pd-standard"
 
@@ -144,24 +144,12 @@ resource "kubernetes_namespace" "argocd" {
   depends_on = [google_gke_hub_feature.mci, google_gke_hub_feature.mcs]
 }
 
-resource "kubernetes_namespace" "mario" {
-  metadata {
-    name = "mario"
-    labels = {
-      app = "mario"
-    }
-  }
-
-  depends_on = [kubernetes_namespace.argocd]
-}
-
 module "argocd_central" {
   source          = "./modules/argocd"
   project_id      = var.project_id
   gcp_sa_name     = "argocd-central-gcp-sa"
   k8s_sa_name     = "argocd-central-k8s-sa"
   namespace       = kubernetes_namespace.argocd.metadata[0].name
-  app_namespace   = kubernetes_namespace.mario.metadata[0].name
   environment     = var.environment
   gitops_repo_url = "https://github.com/gmccormick8/gcp-demo-app.git"
 

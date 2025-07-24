@@ -59,7 +59,7 @@ jobs:
             CLUSTER_LOCATION=$(echo $entry | cut -d' ' -f2)
 
             echo "Authenticating to cluster: $CLUSTER_NAME in $CLUSTER_LOCATION"
-            gcloud container clusters get-credentials "$CLUSTER_NAME" --region "$CLUSTER_LOCATION" --project "$GOOGLE_CLOUD_PROJECT"
+            gcloud container clusters get-credentials "$CLUSTER_NAME" --zone "$CLUSTER_LOCATION" --project "$GOOGLE_CLOUD_PROJECT"
 
             # If this is the central cluster, run Argo CD cleanup
             if [[ "$CLUSTER_NAME" == *"central"* ]]; then

@@ -102,7 +102,8 @@ resource "helm_release" "argocd" {
   ]
 
   depends_on = [
-    kubernetes_service_account.argocd_k8s
+    kubernetes_service_account.argocd_k8s,
+    terraform_data.cleanup_argocd_apps
   ]
 }
 
@@ -206,5 +207,39 @@ resource "helm_release" "mario_apps" {
     kubernetes_secret.argocd_east_cluster,
     kubernetes_secret.argocd_west_cluster,
     kubernetes_secret.argocd_central_cluster
+  ]
+}
+
+resource "terraform_data" "cleanup_argocd_apps" {
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<EOT
+      # Delete Applications
+      APPS=$(kubectl get applications.argoproj.io -n ${var.namespace} -o name || true)
+      if [ ! -z "$APPS" ]; then
+        echo "Deleting Applications: $APPS"
+        kubectl delete $APPS -n ${var.namespace} || true
+      fi
+
+      # Delete ApplicationSets
+      APPSETS=$(kubectl get applicationsets.argoproj.io -n ${var.namespace} -o name || true)
+      if [ ! -z "$APPSETS" ]; then
+        echo "Deleting ApplicationSets: $APPSETS"
+        kubectl delete $APPSETS -n ${var.namespace} || true
+      fi
+
+      # Delete AppProjects
+      APPPROJS=$(kubectl get appprojects.argoproj.io -n ${var.namespace} -o name || true)
+      if [ ! -z "$APPPROJS" ]; then
+        echo "Deleting AppProjects: $APPPROJS"
+        kubectl delete $APPPROJS -n ${var.namespace} || true
+      fi
+      sleep 30
+    EOT
+  }
+
+  depends_on = [
+    helm_release.argocd,
+    helm_release.mario_apps
   ]
 }

@@ -111,14 +111,8 @@ resource "google_gke_hub_feature" "mcs" {
   project  = var.project_id
   location = "global"
 
-  lifecycle {
-    prevent_destroy = false
-  }
-
   depends_on = [
-    module.gke_clusters,
-    terraform_data.cleanup_mcs_resources,
-    terraform_data.fleet_membership_cleanup
+    module.gke_clusters
   ]
 }
 
@@ -135,13 +129,8 @@ resource "google_gke_hub_feature" "mci" {
     }
   }
 
-  lifecycle {
-    prevent_destroy = false
-  }
-
   depends_on = [
-    module.gke_clusters,
-    terraform_data.fleet_membership_cleanup
+    module.gke_clusters
   ]
 }
 
@@ -225,23 +214,6 @@ resource "terraform_data" "fleet_membership_cleanup" {
       sleep 180
     EOT
   }
-}
 
-resource "terraform_data" "cleanup_mcs_resources" {
-  triggers_replace = {
-    project_id = var.project_id
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<EOT
-      echo "Deleting ServiceExports and ServiceImports from all clusters..."
-      for ctx in $(kubectl config get-contexts -o name); do
-        kubectl --context=$ctx delete serviceexport --all --all-namespaces || true
-        kubectl --context=$ctx delete serviceimport --all --all-namespaces || true
-      done
-    EOT
-  }
-
-  depends_on = [module.gke_clusters]
+  depends_on = [ module.gke_clusters ]
 }

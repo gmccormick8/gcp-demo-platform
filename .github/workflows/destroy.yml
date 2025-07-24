@@ -47,6 +47,35 @@ jobs:
           service_account: ${{ secrets.TERRAFORM_SA_EMAIL }}
           token_format: "access_token"
           create_credentials_file: true
+
+      - name: Clean up Argo CD Applications and MCS Resources
+        run: |
+          echo "Fetching all GKE clusters in the project..."
+          CLUSTERS=$(gcloud container clusters list --format="value(name,location)")
+
+          for entry in $CLUSTERS; do
+            CLUSTER_NAME=$(echo $entry | cut -d' ' -f1)
+            CLUSTER_LOCATION=$(echo $entry | cut -d' ' -f2)
+
+            echo "Authenticating to cluster: $CLUSTER_NAME in $CLUSTER_LOCATION"
+            gcloud container clusters get-credentials "$CLUSTER_NAME" --region "$CLUSTER_LOCATION" --project "$GOOGLE_CLOUD_PROJECT"
+
+            # If this is the central cluster, run Argo CD cleanup
+            if [[ "$CLUSTER_NAME" == *"central"* ]]; then
+              echo "Running Argo CD Application cleanup on cluster: $CLUSTER_NAME"
+              kubectl delete applications.argoproj.io --all -n argocd || true
+              kubectl delete applicationsets.argoproj.io --all -n argocd || true
+              kubectl delete appprojects.argoproj.io --all -n argocd || true
+              echo "Waiting for Argo CD to clean up..."
+              sleep 30
+            fi
+
+            echo "Cleaning up ServiceExport/ServiceImport from cluster: $CLUSTER_NAME"
+            kubectl delete serviceexport --all --all-namespaces || true
+            kubectl delete serviceimport --all --all-namespaces || true
+          done
+        env:
+          GOOGLE_CLOUD_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
           
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3

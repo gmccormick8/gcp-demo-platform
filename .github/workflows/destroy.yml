@@ -48,6 +48,10 @@ jobs:
           token_format: "access_token"
           create_credentials_file: true
 
+      - name: Install gke-gcloud-auth-plugin
+        run: |
+          sudo apt-get update && sudo apt-get install -y google-cloud-sdk-gke-gcloud-auth-plugin
+
       - name: Clean up Argo CD Applications and MCS Resources
         run: |
           echo "Fetching all GKE clusters in the project..."

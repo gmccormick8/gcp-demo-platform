@@ -76,7 +76,7 @@ jobs:
             kubectl delete serviceimport --all --all-namespaces || true
           done
         env:
-          GOOGLE_CLOUD_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+          GOOGLE_CLOUD_PROJECT: ${{ secrets.PROJECT_ID }}
           
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3

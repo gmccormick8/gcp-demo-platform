@@ -215,5 +215,5 @@ resource "terraform_data" "fleet_membership_cleanup" {
     EOT
   }
 
-  depends_on = [ module.gke_clusters ]
+  depends_on = [module.gke_clusters]
 }

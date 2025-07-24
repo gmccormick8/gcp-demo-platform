@@ -96,7 +96,7 @@ module "gke_clusters" {
   min_node_count             = 1
   master_authorized_networks = [{ "cidr_block" : "0.0.0.0/0", "display_name" : "All IPs - For GitHub Actions" }]
   max_node_count             = 3
-  machine_type               = "e2-standard-4"
+  machine_type               = "e2-standard-2"
   disk_size_gb               = 25
   disk_type                  = "pd-standard"
 
@@ -112,8 +112,7 @@ resource "google_gke_hub_feature" "mcs" {
   location = "global"
 
   depends_on = [
-    module.gke_clusters,
-    terraform_data.fleet_membership_cleanup
+    module.gke_clusters
   ]
 }
 
@@ -131,8 +130,7 @@ resource "google_gke_hub_feature" "mci" {
   }
 
   depends_on = [
-    module.gke_clusters,
-    terraform_data.fleet_membership_cleanup
+    module.gke_clusters
   ]
 }
 
@@ -140,16 +138,6 @@ resource "kubernetes_namespace" "argocd" {
   metadata {
     name = "argocd"
   }
-
-  depends_on = [google_gke_hub_feature.mci, google_gke_hub_feature.mcs]
-}
-
-resource "kubernetes_namespace" "mario" {
-  metadata {
-    name = "mario"
-  }
-
-  depends_on = [kubernetes_namespace.argocd]
 }
 
 module "argocd_central" {
@@ -211,67 +199,27 @@ resource "terraform_data" "fleet_membership_cleanup" {
     command = <<EOT
       echo "Unregistering clusters from fleet..."
       for CLUSTER in central east west; do
-        gcloud container clusters update "$${CLUSTER}-cluster" \
+        gcloud container fleet memberships delete "$${CLUSTER}-cluster" \
           --project=${self.triggers_replace.project_id} \
-          --location=$(gcloud container clusters list --project=${self.triggers_replace.project_id} --filter="name=$${CLUSTER}-cluster" --format="value(location)") \
-          --unregister-fleet \
           --quiet || true
       done
 
       # Wait for unregistration to complete
-      echo "Waiting 90 seconds for fleet unregistration to complete..."
-      sleep 90
-    EOT
-  }
-}
+      echo "Waiting 180 seconds for fleet unregistration to complete..."
+      sleep 180
 
-# Cleanup automatically created Zonal NEGs
-resource "terraform_data" "neg_cleanup" {
-  triggers_replace = {
-    project_id = var.project_id
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<EOT
-      echo "Cleaning up Network Endpoint Groups (NEGs)..."
-      gcloud compute network-endpoint-groups list --format="value(name,zone)" | while read -r name zone; do
-        gcloud compute network-endpoint-groups delete "$name" --zone="$zone" --quiet --project=${self.triggers_replace.project_id} || echo "Failed to delete NEG: $name in zone: $zone"
+      echo "Checking for orphaned forwarding rules..."
+      gcloud compute forwarding-rules list --filter="name~'mcs'" --format="value(name)" \
+      | while read rule; do
+        echo "Deleting $rule..."
+        gcloud compute forwarding-rules delete "$rule" --global --quiet || true
       done
     EOT
   }
 
-  depends_on = [module.demo-vpc]
-}
-
-# Cleanup dynamically created forwarding rules
-resource "terraform_data" "forwarding_rule_cleanup" {
-  triggers_replace = {
-    project_id = var.project_id
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<EOT
-      echo "Cleaning up forwarding rules..."
-      RULES=$(gcloud compute forwarding-rules list \
-        --project=${self.triggers_replace.project_id} \
-        --format='value(name)')
-      
-      echo $RULES
-      if [ ! -z "$RULES" ]; then
-        for RULE in $RULES; do
-          echo "Deleting forwarding rule: $RULE"
-          gcloud compute forwarding-rules delete $RULE \
-            --project=${self.triggers_replace.project_id} \
-            --global \
-            --quiet || echo "Failed to delete forwarding rule: $RULE"
-        done
-      else
-        echo "No matching forwarding rules found to delete"
-      fi
-    EOT
-  }
-
-  depends_on = [module.demo-vpc]
+  depends_on = [
+    module.gke_clusters,
+    google_gke_hub_feature.mcs,
+    google_gke_hub_feature.mci
+  ]
 }

@@ -22,6 +22,8 @@ applications:
         selfHeal: true
       syncOptions:
         - CreateNamespace=true
+    finalizers:
+      - resources-finalizer.argocd.argoproj.io
 
   mario-central:
     name: mario-central
@@ -46,6 +48,8 @@ applications:
         selfHeal: true
       syncOptions:
         - CreateNamespace=true
+    finalizers:
+      - resources-finalizer.argocd.argoproj.io
 
   mario-west:
     name: mario-west
@@ -70,3 +74,5 @@ applications:
         selfHeal: true
       syncOptions:
         - CreateNamespace=true
+    finalizers:
+      - resources-finalizer.argocd.argoproj.io

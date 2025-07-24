@@ -213,32 +213,42 @@ resource "helm_release" "mario_apps" {
 
 resource "terraform_data" "cleanup_argocd_apps" {
   triggers_replace = {
-    argocd_namespace = var.namespace
+    namespace = var.namespace
   }
 
   provisioner "local-exec" {
     when    = destroy
     command = <<EOT
-      ARGOCD_NAMESPACE="${self.triggers_replace.argocd_namespace}"
+      echo "Cleaning up ArgoCD Applications in namespace: ${self.triggers_replace.namespace}"
 
-      APPS=$(kubectl get applications.argoproj.io -n "$ARGOCD_NAMESPACE" -o name || true)
+      # Delete Applications
+      APPS=$(kubectl get applications.argoproj.io -n ${self.triggers_replace.namespace} -o name || true)
       if [ ! -z "$APPS" ]; then
         echo "Deleting Applications: $APPS"
-        kubectl delete $APPS -n "$ARGOCD_NAMESPACE" || true
+        kubectl delete $APPS -n ${self.triggers_replace.namespace} || true
       fi
 
-      APPSETS=$(kubectl get applicationsets.argoproj.io -n "$ARGOCD_NAMESPACE" -o name || true)
+      # Delete ApplicationSets
+      APPSETS=$(kubectl get applicationsets.argoproj.io -n ${self.triggers_replace.namespace} -o name || true)
       if [ ! -z "$APPSETS" ]; then
         echo "Deleting ApplicationSets: $APPSETS"
-        kubectl delete $APPSETS -n "$ARGOCD_NAMESPACE" || true
+        kubectl delete $APPSETS -n ${self.triggers_replace.namespace} || true
       fi
 
-      APPPROJS=$(kubectl get appprojects.argoproj.io -n "$ARGOCD_NAMESPACE" -o name || true)
+      # Delete AppProjects
+      APPPROJS=$(kubectl get appprojects.argoproj.io -n ${self.triggers_replace.namespace} -o name || true)
       if [ ! -z "$APPPROJS" ]; then
         echo "Deleting AppProjects: $APPPROJS"
-        kubectl delete $APPPROJS -n "$ARGOCD_NAMESPACE" || true
+        kubectl delete $APPPROJS -n ${self.triggers_replace.namespace} || true
       fi
+
+      echo "Waiting for workloads to clean up..."
       sleep 30
     EOT
   }
+
+  depends_on = [
+    helm_release.argocd,
+    helm_release.mario_apps
+  ]
 }

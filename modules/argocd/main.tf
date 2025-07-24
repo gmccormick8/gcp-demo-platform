@@ -206,8 +206,7 @@ resource "helm_release" "mario_apps" {
     helm_release.argocd,
     kubernetes_secret.argocd_east_cluster,
     kubernetes_secret.argocd_west_cluster,
-    kubernetes_secret.argocd_central_cluster,
-    terraform_data.cleanup_argocd_apps
+    kubernetes_secret.argocd_central_cluster
   ]
 }
 
@@ -246,4 +245,6 @@ resource "terraform_data" "cleanup_argocd_apps" {
       sleep 30
     EOT
   }
+
+  depends_on = [ helm_release.mario_apps ]
 }

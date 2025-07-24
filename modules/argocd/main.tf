@@ -246,8 +246,4 @@ resource "terraform_data" "cleanup_argocd_apps" {
       sleep 30
     EOT
   }
-
-  depends_on = [
-    helm_release.argocd
-  ]
 }

@@ -215,10 +215,8 @@ resource "terraform_data" "fleet_membership_cleanup" {
     command = <<EOT
       echo "Unregistering clusters from fleet..."
       for CLUSTER in central east west; do
-        gcloud container clusters update "$${CLUSTER}-cluster" \
+        gcloud container fleet memberships delete "$${CLUSTER}-cluster" \
           --project=${self.triggers_replace.project_id} \
-          --location=$(gcloud container clusters list --project=${self.triggers_replace.project_id} --filter="name=$${CLUSTER}-cluster" --format="value(location)") \
-          --unregister-fleet \
           --quiet || true
       done
 

@@ -211,14 +211,15 @@ resource "helm_release" "mario_apps" {
 }
 
 resource "terraform_data" "cleanup_argocd_apps" {
+  triggers_replace = {
+    argocd_namespace = var.namespace
+  }
+
   provisioner "local-exec" {
-    when = destroy
-
-    environment = {
-      ARGOCD_NAMESPACE = var.namespace
-    }
-
+    when    = destroy
     command = <<EOT
+      ARGOCD_NAMESPACE="${self.triggers_replace.argocd_namespace}"
+      
       APPS=$(kubectl get applications.argoproj.io -n "$ARGOCD_NAMESPACE" -o name || true)
       if [ ! -z "$APPS" ]; then
         echo "Deleting Applications: $APPS"

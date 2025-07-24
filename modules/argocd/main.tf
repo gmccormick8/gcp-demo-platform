@@ -248,7 +248,6 @@ resource "terraform_data" "cleanup_argocd_apps" {
   }
 
   depends_on = [
-    helm_release.argocd,
-    helm_release.mario_apps
+    helm_release.argocd
   ]
 }

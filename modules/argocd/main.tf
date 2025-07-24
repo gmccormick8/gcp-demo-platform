@@ -212,7 +212,7 @@ resource "helm_release" "mario_apps" {
 
 resource "terraform_data" "cleanup_argocd_apps" {
   provisioner "local-exec" {
-    when    = destroy
+    when = destroy
 
     environment = {
       ARGOCD_NAMESPACE = var.namespace

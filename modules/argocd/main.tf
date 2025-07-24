@@ -213,26 +213,28 @@ resource "helm_release" "mario_apps" {
 resource "terraform_data" "cleanup_argocd_apps" {
   provisioner "local-exec" {
     when    = destroy
+
+    environment = {
+      ARGOCD_NAMESPACE = var.namespace
+    }
+
     command = <<EOT
-      # Delete Applications
-      APPS=$(kubectl get applications.argoproj.io -n ${var.namespace} -o name || true)
+      APPS=$(kubectl get applications.argoproj.io -n "$ARGOCD_NAMESPACE" -o name || true)
       if [ ! -z "$APPS" ]; then
         echo "Deleting Applications: $APPS"
-        kubectl delete $APPS -n ${var.namespace} || true
+        kubectl delete $APPS -n "$ARGOCD_NAMESPACE" || true
       fi
 
-      # Delete ApplicationSets
-      APPSETS=$(kubectl get applicationsets.argoproj.io -n ${var.namespace} -o name || true)
+      APPSETS=$(kubectl get applicationsets.argoproj.io -n "$ARGOCD_NAMESPACE" -o name || true)
       if [ ! -z "$APPSETS" ]; then
         echo "Deleting ApplicationSets: $APPSETS"
-        kubectl delete $APPSETS -n ${var.namespace} || true
+        kubectl delete $APPSETS -n "$ARGOCD_NAMESPACE" || true
       fi
 
-      # Delete AppProjects
-      APPPROJS=$(kubectl get appprojects.argoproj.io -n ${var.namespace} -o name || true)
+      APPPROJS=$(kubectl get appprojects.argoproj.io -n "$ARGOCD_NAMESPACE" -o name || true)
       if [ ! -z "$APPPROJS" ]; then
         echo "Deleting AppProjects: $APPPROJS"
-        kubectl delete $APPPROJS -n ${var.namespace} || true
+        kubectl delete $APPPROJS -n "$ARGOCD_NAMESPACE" || true
       fi
       sleep 30
     EOT

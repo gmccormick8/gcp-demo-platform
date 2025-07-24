@@ -52,16 +52,10 @@ jobs:
         run: |
           echo "Fetching all GKE clusters in the project..."
           gcloud config set project "$GOOGLE_CLOUD_PROJECT"
-          CLUSTERS=$(gcloud container clusters list --format="value(name,location)")
+          gcloud container clusters list --format="csv(name,zone)" --project="$GOOGLE_CLOUD_PROJECT" | tail -n +2 | while IFS=',' read -r CLUSTER_NAME CLUSTER_ZONE; do
+            echo "Authenticating to cluster: $CLUSTER_NAME in $CLUSTER_ZONE"
+            gcloud container clusters get-credentials "$CLUSTER_NAME" --zone "$CLUSTER_ZONE" --project "$GOOGLE_CLOUD_PROJECT"
 
-          for entry in $CLUSTERS; do
-            CLUSTER_NAME=$(echo $entry | cut -d' ' -f1)
-            CLUSTER_LOCATION=$(echo $entry | cut -d' ' -f2)
-
-            echo "Authenticating to cluster: $CLUSTER_NAME in $CLUSTER_LOCATION"
-            gcloud container clusters get-credentials "$CLUSTER_NAME" --zone "$CLUSTER_LOCATION" --project "$GOOGLE_CLOUD_PROJECT"
-
-            # If this is the central cluster, run Argo CD cleanup
             if [[ "$CLUSTER_NAME" == *"central"* ]]; then
               echo "Running Argo CD Application cleanup on cluster: $CLUSTER_NAME"
               kubectl delete applications.argoproj.io --all -n argocd || true

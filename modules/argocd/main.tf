@@ -246,5 +246,5 @@ resource "terraform_data" "cleanup_argocd_apps" {
     EOT
   }
 
-  depends_on = [ helm_release.mario_apps ]
+  depends_on = [helm_release.mario_apps]
 }

@@ -102,8 +102,7 @@ resource "helm_release" "argocd" {
   ]
 
   depends_on = [
-    kubernetes_service_account.argocd_k8s,
-    terraform_data.cleanup_argocd_apps
+    kubernetes_service_account.argocd_k8s
   ]
 }
 
@@ -246,5 +245,8 @@ resource "terraform_data" "cleanup_argocd_apps" {
     EOT
   }
 
-  depends_on = [helm_release.mario_apps]
+  depends_on = [
+    helm_release.mario_apps,
+    helm_release.argocd
+  ]
 }

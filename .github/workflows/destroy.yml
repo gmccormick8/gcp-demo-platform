@@ -51,6 +51,7 @@ jobs:
       - name: Clean up Argo CD Applications and MCS Resources
         run: |
           echo "Fetching all GKE clusters in the project..."
+          gcloud config set project "$GOOGLE_CLOUD_PROJECT"
           CLUSTERS=$(gcloud container clusters list --format="value(name,location)")
 
           for entry in $CLUSTERS; do

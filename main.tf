@@ -138,11 +138,6 @@ resource "kubernetes_namespace" "argocd" {
   metadata {
     name = "argocd"
   }
-
-  depends_on = [
-    google_gke_hub_feature.mci,
-    google_gke_hub_feature.mcs
-  ]
 }
 
 module "argocd_central" {
@@ -212,8 +207,19 @@ resource "terraform_data" "fleet_membership_cleanup" {
       # Wait for unregistration to complete
       echo "Waiting 180 seconds for fleet unregistration to complete..."
       sleep 180
+
+      echo "Checking for orphaned forwarding rules..."
+      gcloud compute forwarding-rules list --filter="name~'mcs'" --format="value(name)" \
+      | while read rule; do
+        echo "Deleting $rule..."
+        gcloud compute forwarding-rules delete "$rule" --global --quiet || true
+      done
     EOT
   }
 
-  depends_on = [module.gke_clusters]
+  depends_on = [
+    module.gke_clusters,
+    google_gke_hub_feature.mcs,
+    google_gke_hub_feature.mci
+  ]
 }

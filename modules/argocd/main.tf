@@ -1,15 +1,31 @@
+# Variables for Mario app deployment
+locals {
+  rendered_values = templatefile("${path.module}/values.yaml.tpl", {
+    gitops_repo_url          = var.gitops_repo_url
+    environment              = var.environment
+    namespace                = var.namespace
+    app_namespace            = "mario"
+    east_cluster_endpoint    = var.east_cluster_endpoint
+    central_cluster_endpoint = var.central_cluster_endpoint
+    west_cluster_endpoint    = var.west_cluster_endpoint
+  })
+}
+
+# Create a GCP Service Account for ArgoCD
 resource "google_service_account" "argocd_gcp_sa" {
   account_id   = var.gcp_sa_name
   display_name = "ArgoCD Workload Identity SA"
   project      = var.project_id
 }
 
+# Grant the ArgoCD GCP Service Account access to Secret Manager
 resource "google_project_iam_member" "argocd_secretmanager" {
   project = var.project_id
   role    = "roles/secretmanager.secretAccessor"
   member  = "serviceAccount:${google_service_account.argocd_gcp_sa.email}"
 }
 
+# Create a Kubernetes Service Account for ArgoCD
 resource "kubernetes_service_account" "argocd_k8s" {
   metadata {
     name      = var.k8s_sa_name
@@ -20,12 +36,14 @@ resource "kubernetes_service_account" "argocd_k8s" {
   }
 }
 
+# Bind the Kubernetes Service Account to the GCP Service Account using Workload Identity
 resource "google_service_account_iam_binding" "workload_identity_binding" {
   service_account_id = google_service_account.argocd_gcp_sa.name
   role               = "roles/iam.workloadIdentityUser"
   members            = ["serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/${kubernetes_service_account.argocd_k8s.metadata[0].name}]"]
 }
 
+# Fetch the ArgoCD admin password from Secret Manager
 data "google_secret_manager_secret_version" "argocd_admin_password" {
   project = var.project_id
   secret  = "argocd-admin-password-${var.environment}"
@@ -39,6 +57,7 @@ data "kubernetes_service" "argocd_server" {
   depends_on = [helm_release.argocd]
 }
 
+# Install ArgoCD using Helm
 resource "helm_release" "argocd" {
   name       = "argocd"
   repository = "https://argoproj.github.io/argo-helm"
@@ -94,6 +113,7 @@ resource "helm_release" "argocd" {
   ]
 }
 
+# Adjust ArgoCD timeout settings
 resource "kubernetes_config_map_v1" "argocd_cm" {
   metadata {
     name      = "argocd-cm"
@@ -114,6 +134,7 @@ resource "kubernetes_config_map_v1" "argocd_cm" {
   }
 }
 
+#  Register East cluster with ArgoCD
 resource "kubernetes_secret" "argocd_east_cluster" {
   metadata {
     name      = "argocd-cluster-east"
@@ -136,6 +157,7 @@ resource "kubernetes_secret" "argocd_east_cluster" {
   depends_on = [helm_release.argocd]
 }
 
+# Register the West cluster with ArgoCD
 resource "kubernetes_secret" "argocd_west_cluster" {
   metadata {
     name      = "argocd-cluster-west"
@@ -158,6 +180,8 @@ resource "kubernetes_secret" "argocd_west_cluster" {
   depends_on = [helm_release.argocd]
 }
 
+# Register the Central cluster with ArgoCD
+# This is necessary for the Central cluster to manage itself and other clusters
 resource "kubernetes_secret" "argocd_central_cluster" {
   metadata {
     name      = "argocd-cluster-central"
@@ -180,111 +204,15 @@ resource "kubernetes_secret" "argocd_central_cluster" {
   depends_on = [helm_release.argocd]
 }
 
-resource "helm_release" "mario_application" {
+# Deploy Mario applications using ArgoCD
+resource "helm_release" "mario_apps" {
   name       = "mario-apps"
   repository = "https://argoproj.github.io/argo-helm"
   chart      = "argocd-apps"
   namespace  = var.namespace
+  version    = "2.0.2"
 
-  values = [
-    yamlencode({
-      applications = {
-        "mario-east" = {
-          name      = "mario-east"
-          namespace = var.namespace
-          project   = "default"
-          source = {
-            repoURL        = var.gitops_repo_url
-            targetRevision = var.environment
-            path           = "helm/mario"
-            helm = {
-              values = yamlencode({
-                gateway = {
-                  enable = false
-                }
-                global = {
-                  environment = var.environment
-                }
-              })
-            }
-          }
-          destination = {
-            server    = "https://${var.east_cluster_endpoint}"
-            namespace = "mario"
-          }
-          syncPolicy = {
-            automated = {
-              prune    = true
-              selfHeal = true
-            }
-            syncOptions = ["CreateNamespace=true"]
-          }
-        }
-        "mario-central" = {
-          name      = "mario-central"
-          namespace = var.namespace
-          project   = "default"
-          source = {
-            repoURL        = var.gitops_repo_url
-            targetRevision = var.environment
-            path           = "helm/mario"
-            helm = {
-              values = yamlencode({
-                gateway = {
-                  enable = true
-                }
-                global = {
-                  environment = var.environment
-                }
-              })
-            }
-          }
-          destination = {
-            server    = "https://${var.central_cluster_endpoint}"
-            namespace = "mario"
-          }
-          syncPolicy = {
-            automated = {
-              prune    = true
-              selfHeal = true
-            }
-            syncOptions = ["CreateNamespace=true"]
-          }
-        }
-        "mario-west" = {
-          name      = "mario-west"
-          namespace = var.namespace
-          project   = "default"
-          source = {
-            repoURL        = var.gitops_repo_url
-            targetRevision = var.environment
-            path           = "helm/mario"
-            helm = {
-              values = yamlencode({
-                gateway = {
-                  enable = false
-                }
-                global = {
-                  environment = var.environment
-                }
-              })
-            }
-          }
-          destination = {
-            server    = "https://${var.west_cluster_endpoint}"
-            namespace = "mario"
-          }
-          syncPolicy = {
-            automated = {
-              prune    = true
-              selfHeal = true
-            }
-            syncOptions = ["CreateNamespace=true"]
-          }
-        }
-      }
-    })
-  ]
+  values = [local.rendered_values]
 
   depends_on = [
     helm_release.argocd,

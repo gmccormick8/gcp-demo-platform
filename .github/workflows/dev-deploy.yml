@@ -49,7 +49,7 @@ jobs:
         env:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
         run: |
-          terraform init -var-file="dev.tfvars" -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+          terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
 
       - name: Terraform Validate
         run: terraform validate
@@ -60,10 +60,20 @@ jobs:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
           GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.gcp-auth.outputs.access_token }}
           TF_IN_AUTOMATION: "true"
+          TF_LOG: DEBUG
+          TF_LOG_PATH: tfplan.log
         run: |
-          terraform plan -detailed-exitcode -out=terraform-plan.tfplan -input=false -no-color \
+          terraform plan \
+            -detailed-exitcode \
+            -out=terraform-plan.tfplan \
+            -input=false \
+            -no-color \
             -var="project_id=${{ secrets.PROJECT_ID }}" \
             -var-file="dev.tfvars" || echo "exitcode=$?" >> $GITHUB_OUTPUT
+
+      - name: Show debug log on error
+        if: failure()
+        run: tail -n 200 tfplan.log || true
 
       - name: Check for Changes
         id: check_changes
@@ -141,7 +151,7 @@ jobs:
         env:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
         run: |
-          terraform init -var-file="dev.tfvars" -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+          terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
 
       - name: Output Plan Summary
         id: plan_summary
@@ -202,7 +212,7 @@ jobs:
         env:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
         run: |
-          terraform init -var-file="dev.tfvars" -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+          terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
 
       - name: Download Terraform Plan
         uses: actions/download-artifact@v4
@@ -219,7 +229,9 @@ jobs:
           TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
           GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.gcp-auth-apply.outputs.access_token }}
           TF_IN_AUTOMATION: "true"
-        run: terraform apply -var-file="dev.tfvars" -auto-approve terraform-plan.tfplan
+        run: terraform apply \
+              -var-file="dev.tfvars" \
+              -auto-approve terraform-plan.tfplan
 
       - name: Display Terraform Outputs
         id: terraform_outputs

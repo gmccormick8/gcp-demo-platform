@@ -225,7 +225,8 @@ jobs:
           TF_IN_AUTOMATION: "true"
         run: terraform apply \
               -var-file="dev.tfvars" \
-              -auto-approve terraform-plan.tfplan
+              -auto-approve \
+              terraform-plan.tfplan
 
       - name: Display Terraform Outputs
         id: terraform_outputs

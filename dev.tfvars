@@ -83,4 +83,4 @@ gcp_sa_name = "argocd-gcp-sa"
 
 k8s_sa_name = "argocd-k8s-sa"
 
-namespace = "argocd"
+argocd_namespace = "argocd"

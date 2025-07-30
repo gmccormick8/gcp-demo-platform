@@ -1,3 +1,4 @@
+applications:
 %{ for name, cluster in clusters ~}
 mario-${name}:
   name: mario-${name}

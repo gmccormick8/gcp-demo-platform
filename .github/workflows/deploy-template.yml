@@ -1,4 +1,4 @@
-name: Terraform Deploy Template
+name: Deploy Template
 
 on:
   workflow_call:

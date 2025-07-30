@@ -1,4 +1,4 @@
-name: Terraform Prod Destroy Pipeline
+name: Prod Destroy Pipeline
 
 on:
   workflow_dispatch:

@@ -3,21 +3,15 @@ resource "google_service_account" "gke_sa" {
   display_name = "GKE Service Account for ${var.zone}"
 }
 
-resource "google_project_iam_member" "gke_sa_node_service_agent_role" {
-  project = var.project_id
-  role    = "roles/container.nodeServiceAgent"
-  member  = "serviceAccount:${google_service_account.gke_sa.email}"
-}
+resource "google_project_iam_member" "gke_sa_roles" {
+  for_each = toset([
+    "roles/container.nodeServiceAgent",
+    "roles/compute.networkViewer",
+    "roles/container.admin"
+  ])
 
-resource "google_project_iam_member" "gke_sa_network_viewer_role" {
   project = var.project_id
-  role    = "roles/compute.networkViewer"
-  member  = "serviceAccount:${google_service_account.gke_sa.email}"
-}
-
-resource "google_project_iam_member" "gke_sa_container_admin_role" {
-  project = var.project_id
-  role    = "roles/container.admin"
+  role    = each.key
   member  = "serviceAccount:${google_service_account.gke_sa.email}"
 }
 
@@ -62,14 +56,6 @@ resource "google_container_cluster" "primary" {
 
   master_authorized_networks_config {
     gcp_public_cidrs_access_enabled = true
-
-    dynamic "cidr_blocks" {
-      for_each = var.master_authorized_networks
-      content {
-        cidr_block   = cidr_blocks.value.cidr_block
-        display_name = cidr_blocks.value.display_name
-      }
-    }
   }
 
   binary_authorization {

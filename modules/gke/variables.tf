@@ -67,12 +67,3 @@ variable "disk_type" {
   type        = string
   default     = "pd-standard"
 }
-
-variable "master_authorized_networks" {
-  description = "List of CIDR blocks that are allowed to access the master's API endpoint"
-  type = list(object({
-    cidr_block   = string
-    display_name = string
-  }))
-  default = []
-}

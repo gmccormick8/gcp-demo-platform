@@ -30,63 +30,16 @@ variable "gitops_repo_url" {
   default     = "https://github.com/gmccormick8/gcp-demo-app.git"
 }
 
-variable "central_cluster_endpoint" {
-  description = "The endpoint of the central Kubernetes cluster to register with ArgoCD"
-  type        = string
-}
+variable "clusters" {
+  type = map(object({
+    endpoint       = string
+    ca_certificate = string
+    access_token   = string
+  }))
 
-variable "central_cluster_ca_certificate" {
-  description = "The cluster CA certificate"
-  type        = string
-}
 
-variable "central_access_token" {
-  description = "The access token for the Kubernetes cluster"
-  type        = string
+  validation {
+    condition     = contains(keys(var.clusters), "central")
+    error_message = "The clusters map must include a 'central' cluster."
+  }
 }
-
-variable "central_region" {
-  description = "The GCP region where resources will be created"
-  type        = string
-}
-
-variable "east_cluster_endpoint" {
-  description = "The endpoint of the east Kubernetes cluster to register with ArgoCD"
-  type        = string
-}
-
-variable "east_cluster_ca_certificate" {
-  description = "The CA certificate of the east Kubernetes cluster"
-  type        = string
-}
-
-variable "east_access_token" {
-  description = "The access token for the east Kubernetes cluster"
-  type        = string
-}
-
-variable "east_region" {
-  description = "The region of the east Kubernetes cluster"
-  type        = string
-}
-
-variable "west_cluster_endpoint" {
-  description = "The endpoint of the west Kubernetes cluster to register with ArgoCD"
-  type        = string
-}
-
-variable "west_cluster_ca_certificate" {
-  description = "The CA certificate of the west Kubernetes cluster"
-  type        = string
-}
-
-variable "west_access_token" {
-  description = "The access token for the west Kubernetes cluster"
-  type        = string
-}
-
-variable "west_region" {
-  description = "The region of the west Kubernetes cluster"
-  type        = string
-}
-

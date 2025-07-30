@@ -1,4 +1,4 @@
-name: Terraform Dev Destroy Pipeline
+name: Terraform Staging Destroy Pipeline
 
 on:
   workflow_dispatch:
@@ -10,11 +10,11 @@ on:
 
 jobs:
   deploy:
-    if: inputs.confirmation == github.ref_name && github.ref_name == 'dev'
+    if: inputs.confirmation == github.ref_name && github.ref_name == 'staging'
     uses: ./.github/workflows/destroy-template.yml
     with:
-      tfvars_file: dev.tfvars
-      environment: dev
+      tfvars_file: staging.tfvars
+      environment: staging
     secrets: inherit
 
     permissions:

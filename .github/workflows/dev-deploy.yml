@@ -1,4 +1,4 @@
-name: Terraform Dev Deploy Pipeline
+name: Dev Deploy Pipeline
 
 on:
   push:

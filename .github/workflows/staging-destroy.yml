@@ -1,4 +1,4 @@
-name: Terraform Staging Destroy Pipeline
+name: Staging Destroy Pipeline
 
 on:
   workflow_dispatch:

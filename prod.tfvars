@@ -23,12 +23,6 @@ subnets = {
       "demo-central-services" = {
         ip_cidr_range = "192.168.96.0/19"
       }
-      "demo-central2-pods" = {
-        ip_cidr_range = "192.168.192.0/19"
-      }
-      "demo-central2-services" = {
-        ip_cidr_range = "192.168.224.0/19"
-      }
     }
   }
   "demo-west-vpc" = {
@@ -69,21 +63,6 @@ clusters = {
     pods_network_name     = "demo-central-pods"
     services_network_name = "demo-central-services"
     master_ipv4_cidr      = "172.16.1.0/28"
-    master_authorized_networks = [
-      {
-        cidr_block   = "0.0.0.0/0"
-        display_name = "Github Actions"
-      }
-    ]
-  }
-  central2 = {
-    cluster_name          = "central2-cluster"
-    region                = "us-central1"
-    zone                  = "us-central1-f"
-    subnet_key            = "demo-central-vpc"
-    pods_network_name     = "demo-central2-pods"
-    services_network_name = "demo-central2-services"
-    master_ipv4_cidr      = "172.16.3.0/28"
     master_authorized_networks = [
       {
         cidr_block   = "0.0.0.0/0"

@@ -1,4 +1,4 @@
-name: Terraform Prod Deploy Pipeline
+name: Prod Deploy Pipeline
 
 on:
   push:

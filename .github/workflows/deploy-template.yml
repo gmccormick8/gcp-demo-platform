@@ -1,0 +1,233 @@
+name: Terraform Deploy
+
+on:
+  workflow_call:
+    inputs:
+      tfvars_file:
+        required: true
+        type: string
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
+    
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    outputs:
+      has_changes: ${{ steps.check_changes.outputs.has_changes }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 
+          ref: ${{ github.ref_name }}     
+     
+      - name: Authenticate to Google Cloud
+        id: gcp-auth
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ secrets.PROJECT_ID }}
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.TERRAFORM_SA_EMAIL }}
+          token_format: "access_token"
+          create_credentials_file: true
+          
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.12.0'
+
+      - name: Terraform Format
+        env:
+          TF_IN_AUTOMATION: "true"
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Init
+        env:
+          TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
+        run: |
+          terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        id: plan
+        env:
+          TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
+          GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.gcp-auth.outputs.access_token }}
+          TF_IN_AUTOMATION: "true"
+        run: |
+          terraform plan \
+            -detailed-exitcode \
+            -out=terraform-plan.tfplan \
+            -input=false \
+            -no-color \
+            -var="project_id=${{ secrets.PROJECT_ID }}" \
+            -var-file="${{ inputs.tfvars_file }}" || echo "exitcode=$?" >> $GITHUB_OUTPUT
+
+      - name: Check for Changes
+        id: check_changes
+        run: |
+          # If plan exists, determine if there are changes (exit code 2 means changes)
+          if [[ "${{ steps.plan.outputs.exitcode }}" == "2" ]]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected in Terraform plan"
+          elif [[ "${{ steps.plan.outputs.exitcode }}" == "1" ]]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "Errors detected in Terraform plan"
+            echo "Errors detected in Terraform plan" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected in Terraform plan"
+          fi      
+          
+      - name: Upload Terraform Plan
+        if: steps.check_changes.outputs.has_changes == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: |
+            terraform-plan.tfplan
+          retention-days: 1
+
+      - name: Output Plan Summary
+        id: get_plan_summary
+        uses: borchero/terraform-plan-comment@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          planfile: terraform-plan.tfplan
+          skip-empty: true
+
+          
+  approval:
+    needs: plan
+    if: ${{ needs.plan.outputs.has_changes == 'true' }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
+    permissions:
+      issues: write
+      pull-requests: write
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
+
+      - name: Download Terraform Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan
+
+      - name: Authenticate to GCP
+        id: gcp-auth-apply
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ secrets.PROJECT_ID }}
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.TERRAFORM_SA_EMAIL }}
+          token_format: "access_token"
+          create_credentials_file: true
+      
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.12.0'
+
+      - name: Terraform Init
+        env:
+          TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
+        run: |
+          terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+
+      - name: Output Plan Summary
+        id: plan_summary
+        uses: borchero/terraform-plan-comment@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          planfile: terraform-plan.tfplan
+          skip-empty: true
+
+      - name: Manual Approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ secrets.GITHUB_TOKEN }}
+          approvers: ${{ secrets.APPROVERS }}
+          minimum-approvals: 1
+          issue-title: 'Manual Approval for ${{ github.ref_name }} Deployment'
+          issue-body: |
+            Please review this deployment to ${{ github.ref_name }}.
+            <br />
+            ${{ steps.plan_summary.outputs.markdown }}
+            <br />
+          fail-on-denial: true
+
+
+  apply:
+    needs: [plan, approval]
+    if: ${{ needs.plan.outputs.has_changes == 'true' && needs.approval.result == 'success' }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
+    
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
+          
+      - name: Authenticate to GCP
+        id: gcp-auth-apply
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ secrets.PROJECT_ID }}
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.TERRAFORM_SA_EMAIL }}
+          token_format: "access_token"
+          create_credentials_file: true
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.12.0'      
+          
+      - name: Terraform Init
+        env:
+          TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
+        run: |
+          terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+
+      - name: Download Terraform Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan
+
+      - name: Skip Apply if No Changes
+        if: ${{ needs.plan.outputs.has_changes == 'false' }}
+        run: echo "No changes detected in Terraform plan, skipping apply"
+        
+      - name: Terraform Apply
+        if: ${{ needs.plan.outputs.has_changes == 'true' }}
+        env:
+          TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
+          GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.gcp-auth-apply.outputs.access_token }}
+          TF_IN_AUTOMATION: "true"
+        run: terraform apply -var-file="${{ inputs.tfvars_file }}" -auto-approve terraform-plan.tfplan
+
+      - name: Display Terraform Outputs
+        id: terraform_outputs
+        if: ${{ needs.plan.outputs.has_changes == 'true' }}
+        run: |
+          echo "$(terraform output)" >> $GITHUB_STEP_SUMMARY

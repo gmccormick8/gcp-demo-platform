@@ -1,0 +1,24 @@
+name: Terraform Staging Destroy Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type the environment name again to confirm destruction'
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    if: inputs.confirmation == github.ref_name && github.ref_name == 'staging'
+    uses: ./.github/workflows/destroy-template.yml
+    with:
+      tfvars_file: staging.tfvars
+      environment: staging
+    secrets: inherit
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+      issues: write
+      pull-requests: write      

@@ -1,88 +1,16 @@
-locals {
-  clusters = {
-    east = {
-      # GKE cluster config
-      cluster_name          = "east-cluster"
-      region                = "us-east5"
-      zone                  = "us-east5-c"
-      subnet_key            = "demo-east-vpc"
-      pods_network_name     = "demo-east-pods"
-      services_network_name = "demo-east-services"
-      master_ipv4_cidr      = "172.16.0.0/28"
-    }
-    central = {
-      # GKE cluster config
-      cluster_name          = "central-cluster"
-      region                = "us-central1"
-      zone                  = "us-central1-c"
-      subnet_key            = "demo-central-vpc"
-      pods_network_name     = "demo-central-pods"
-      services_network_name = "demo-central-services"
-      master_ipv4_cidr      = "172.16.1.0/28"
-    }
-    west = {
-      # GKE cluster config
-      cluster_name          = "west-cluster"
-      region                = "us-west4"
-      zone                  = "us-west4-c"
-      subnet_key            = "demo-west-vpc"
-      pods_network_name     = "demo-west-pods"
-      services_network_name = "demo-west-services"
-      master_ipv4_cidr      = "172.16.2.0/28"
-    }
-  }
-}
-
 # Create a VPC network and subnets
 module "demo-vpc" {
   source       = "./modules/network"
   project_id   = var.project_id
   network_name = "demo"
 
-  subnets = {
-    "demo-east-vpc" = {
-      region = "us-east5"
-      cidr   = "10.0.0.0/24"
-      secondary_ranges = {
-        "demo-east-pods" = {
-          ip_cidr_range = "192.168.0.0/19"
-        }
-        "demo-east-services" = {
-          ip_cidr_range = "192.168.32.0/19"
-        }
-      }
-    }
-    "demo-central-vpc" = {
-      region = "us-central1"
-      cidr   = "10.0.1.0/24"
-      secondary_ranges = {
-        "demo-central-pods" = {
-          ip_cidr_range = "192.168.64.0/19"
-        }
-        "demo-central-services" = {
-          ip_cidr_range = "192.168.96.0/19"
-        }
-      }
-    }
-    "demo-west-vpc" = {
-      region = "us-west4"
-      cidr   = "10.0.2.0/24"
-      secondary_ranges = {
-        "demo-west-pods" = {
-          ip_cidr_range = "192.168.128.0/19"
-        }
-        "demo-west-services" = {
-          ip_cidr_range = "192.168.160.0/19"
-        }
-      }
-    }
-  }
+  subnets = var.subnets
 
-  cloud_nat_configs = ["us-east5", "us-central1", "us-west4"]
+  cloud_nat_configs = [for cluster in var.clusters : cluster.region]
 }
 
 module "gke_clusters" {
-  for_each = local.clusters
+  for_each = var.clusters
   source   = "./modules/gke"
 
   project_id                 = var.project_id
@@ -93,12 +21,12 @@ module "gke_clusters" {
   pods_network_name          = each.value.pods_network_name
   services_network_name      = each.value.services_network_name
   master_ipv4_cidr_block     = each.value.master_ipv4_cidr
-  min_node_count             = 1
-  master_authorized_networks = [{ "cidr_block" : "0.0.0.0/0", "display_name" : "All IPs - For GitHub Actions" }]
-  max_node_count             = 3
-  machine_type               = "e2-standard-2"
-  disk_size_gb               = 25
-  disk_type                  = "pd-standard"
+  min_node_count             = var.min_node_count
+  max_node_count             = var.max_node_count
+  machine_type               = var.machine_type
+  disk_size_gb               = var.disk_size_gb
+  disk_type                  = var.disk_type
+  master_authorized_networks = each.value.master_authorized_networks
 
   depends_on = [
     module.demo-vpc
@@ -125,7 +53,7 @@ resource "google_gke_hub_feature" "mci" {
 
   spec {
     multiclusteringress {
-      config_membership = "projects/${var.project_id}/locations/${local.clusters["central"].region}/memberships/${module.gke_clusters["central"].cluster_name}"
+      config_membership = "projects/${var.project_id}/locations/${var.clusters["central"].region}/memberships/${module.gke_clusters["central"].cluster_name}"
     }
   }
 
@@ -136,33 +64,26 @@ resource "google_gke_hub_feature" "mci" {
 
 resource "kubernetes_namespace" "argocd" {
   metadata {
-    name = "argocd"
+    name = var.argocd_namespace
   }
 }
 
 module "argocd_central" {
   source          = "./modules/argocd"
   project_id      = var.project_id
-  gcp_sa_name     = "argocd-central-gcp-sa"
-  k8s_sa_name     = "argocd-central-k8s-sa"
+  gcp_sa_name     = var.gcp_sa_name
+  k8s_sa_name     = var.k8s_sa_name
   namespace       = kubernetes_namespace.argocd.metadata[0].name
   environment     = var.environment
   gitops_repo_url = "https://github.com/gmccormick8/gcp-demo-app.git"
 
-  central_cluster_endpoint       = module.gke_clusters["central"].cluster_endpoint
-  central_cluster_ca_certificate = module.gke_clusters["central"].master_auth.cluster_ca_certificate
-  central_access_token           = data.google_client_config.default.access_token
-  central_region                 = local.clusters["central"].region
-
-  east_cluster_endpoint       = module.gke_clusters["east"].cluster_endpoint
-  east_cluster_ca_certificate = module.gke_clusters["east"].master_auth.cluster_ca_certificate
-  east_access_token           = data.google_client_config.default.access_token
-  east_region                 = local.clusters["east"].region
-
-  west_cluster_endpoint       = module.gke_clusters["west"].cluster_endpoint
-  west_cluster_ca_certificate = module.gke_clusters["west"].master_auth.cluster_ca_certificate
-  west_access_token           = data.google_client_config.default.access_token
-  west_region                 = local.clusters["west"].region
+  clusters = {
+    for k, v in var.clusters : k => {
+      endpoint       = module.gke_clusters[k].cluster_endpoint
+      ca_certificate = module.gke_clusters[k].master_auth.cluster_ca_certificate
+      access_token   = data.google_client_config.default.access_token
+    }
+  }
 }
 
 # Cleanup dynamically created firewall rules for GKE clusters

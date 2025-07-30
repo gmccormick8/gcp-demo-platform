@@ -1,0 +1,22 @@
+name: Terraform Prod Deploy Pipeline
+
+on:
+  push:
+    branches:
+      - prod
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-template.yml
+    with:
+      tfvars_file: prod.tfvars
+      environment: prod
+    secrets: inherit
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+      issues: write
+      pull-requests: write
+      

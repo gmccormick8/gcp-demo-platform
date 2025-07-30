@@ -1,4 +1,4 @@
-name: Terraform Destroy Template
+name: Destroy Template
 
 on:
   workflow_call:

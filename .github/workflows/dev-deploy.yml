@@ -12,3 +12,10 @@ jobs:
     with:
       tfvars_file: dev.tfvars
     secrets: inherit
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+      issues: write
+      pull-requests: write
+      

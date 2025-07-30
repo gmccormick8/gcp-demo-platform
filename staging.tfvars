@@ -1,4 +1,4 @@
-environment = "dev"
+environment = "staging"
 
 subnets = {
   "demo-east-vpc" = {

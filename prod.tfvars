@@ -1,4 +1,4 @@
-environment = "dev"
+environment = "prod"
 
 subnets = {
   "demo-east-vpc" = {

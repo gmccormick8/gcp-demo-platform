@@ -6,7 +6,7 @@ module "demo-vpc" {
 
   subnets = var.subnets
 
-  cloud_nat_configs = [for cluster in var.clusters : cluster.value.region]
+  cloud_nat_configs = [for cluster in var.clusters : cluster.region]
 }
 
 module "gke_clusters" {

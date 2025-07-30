@@ -1,13 +1,11 @@
 # Variables for Mario app deployment
 locals {
   rendered_values = templatefile("${path.module}/values.yaml.tpl", {
-    gitops_repo_url          = var.gitops_repo_url
-    environment              = var.environment
-    namespace                = var.namespace
-    app_namespace            = "mario"
-    east_cluster_endpoint    = var.east_cluster_endpoint
-    central_cluster_endpoint = var.central_cluster_endpoint
-    west_cluster_endpoint    = var.west_cluster_endpoint
+    gitops_repo_url = var.gitops_repo_url
+    environment     = var.environment
+    namespace       = var.namespace
+    app_namespace   = "mario"
+    clusters        = var.clusters
   })
 }
 
@@ -134,73 +132,30 @@ resource "kubernetes_config_map_v1" "argocd_cm" {
   }
 }
 
-#  Register East cluster with ArgoCD
-resource "kubernetes_secret" "argocd_east_cluster" {
-  metadata {
-    name      = "argocd-cluster-east"
-    namespace = var.namespace
-    labels = {
-      "argocd.argoproj.io/secret-type" = "cluster"
-    }
-  }
-  data = {
-    name   = "east"
-    server = "https://${var.east_cluster_endpoint}"
-    config = jsonencode({
-      tlsClientConfig = {
-        insecure = false
-        caData   = var.east_cluster_ca_certificate
-      }
-      bearerToken = var.east_access_token
-    })
-  }
-  depends_on = [helm_release.argocd]
-}
+#  Register clusters with ArgoCD
+resource "kubernetes_secret" "argocd_clusters" {
+  for_each = var.clusters
 
-# Register the West cluster with ArgoCD
-resource "kubernetes_secret" "argocd_west_cluster" {
   metadata {
-    name      = "argocd-cluster-west"
+    name      = "argocd-cluster-${each.key}"
     namespace = var.namespace
     labels = {
       "argocd.argoproj.io/secret-type" = "cluster"
     }
   }
-  data = {
-    name   = "west"
-    server = "https://${var.west_cluster_endpoint}"
-    config = jsonencode({
-      tlsClientConfig = {
-        insecure = false
-        caData   = var.west_cluster_ca_certificate
-      }
-      bearerToken = var.west_access_token
-    })
-  }
-  depends_on = [helm_release.argocd]
-}
 
-# Register the Central cluster with ArgoCD
-# This is necessary for the Central cluster to manage itself and other clusters
-resource "kubernetes_secret" "argocd_central_cluster" {
-  metadata {
-    name      = "argocd-cluster-central"
-    namespace = var.namespace
-    labels = {
-      "argocd.argoproj.io/secret-type" = "cluster"
-    }
-  }
   data = {
-    name   = "central"
-    server = "https://${var.central_cluster_endpoint}"
+    name   = each.key
+    server = "https://${each.value.endpoint}"
     config = jsonencode({
       tlsClientConfig = {
         insecure = false
-        caData   = var.central_cluster_ca_certificate
+        caData   = each.value.ca_certificate
       }
-      bearerToken = var.central_access_token
+      bearerToken = each.value.access_token
     })
   }
+
   depends_on = [helm_release.argocd]
 }
 
@@ -216,8 +171,6 @@ resource "helm_release" "mario_apps" {
 
   depends_on = [
     helm_release.argocd,
-    kubernetes_secret.argocd_east_cluster,
-    kubernetes_secret.argocd_west_cluster,
-    kubernetes_secret.argocd_central_cluster
+    kubernetes_secret.argocd_clusters
   ]
 }

@@ -1,0 +1,22 @@
+name: Terraform Staging Deploy Pipeline
+
+on:
+  push:
+    branches:
+      - staging
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-template.yml
+    with:
+      tfvars_file: staging.tfvars
+      environment: staging
+    secrets: inherit
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+      issues: write
+      pull-requests: write
+      

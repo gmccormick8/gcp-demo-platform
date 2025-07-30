@@ -76,6 +76,8 @@ api_array=(
   "serviceusage.googleapis.com"
   "multiclusteringress.googleapis.com"
   "multiclusterservicediscovery.googleapis.com"
+  "trafficdirector.googleapis.com"
+  "anthos.googleapis.com"
 )
 
 for api in "${api_array[@]}"; do
@@ -119,7 +121,7 @@ gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_NAME}" \
   --display-name="GitHub Provider - ${BRANCH}" \
   --attribute-mapping="google.subject=assertion.sub,attribute.repository_id=assertion.repository_id,attribute.workflow_ref=assertion.workflow_ref,attribute.actor_id=assertion.actor_id" \
   --issuer-uri="https://token.actions.githubusercontent.com" \
-  --attribute-condition="assertion.repository_id == '999072242' && (assertion.workflow_ref == 'gmccormick8/gcp-demo-platform/.github/workflows/deploy.yml@refs/heads/${BRANCH}' || assertion.workflow_ref == 'gmccormick8/gcp-demo-platform/.github/workflows/destroy.yml@refs/heads/${BRANCH}') && assertion.actor_id == '74574750'" \
+  --attribute-condition="assertion.repository_id == '999072242' && (assertion.workflow_ref == 'gmccormick8/gcp-demo-platform/.github/workflows/${BRANCH}-deploy.yml@refs/heads/${BRANCH}' || assertion.workflow_ref == 'gmccormick8/gcp-demo-platform/.github/workflows/${BRANCH}-destroy.yml@refs/heads/${BRANCH}') && assertion.actor_id == '74574750'" \
 
 # Define the Workload Identity principal for the specific repo and branch
 WI_PRINCIPAL="principalSet://iam.googleapis.com/${POOL_ID}/attribute.repository_id/999072242"

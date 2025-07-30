@@ -1,0 +1,22 @@
+name: Terraform Dev Deploy Pipeline
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-template.yml
+    with:
+      tfvars_file: dev.tfvars
+      environment: dev
+    secrets: inherit
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+      issues: write
+      pull-requests: write
+      

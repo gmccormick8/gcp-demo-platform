@@ -69,10 +69,9 @@ variable "disk_type" {
 }
 
 variable "master_authorized_networks" {
-  description = "List of CIDR blocks that are allowed to access the master's API endpoint"
+  description = "List of CIDR blocks for master authorized networks"
   type = list(object({
     cidr_block   = string
     display_name = string
   }))
-  default = []
 }

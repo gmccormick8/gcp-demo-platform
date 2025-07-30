@@ -52,7 +52,7 @@ resource "google_gke_hub_feature" "mci" {
 
   spec {
     multiclusteringress {
-      config_membership = "projects/${var.project_id}/locations/${local.clusters["central"].region}/memberships/${module.gke_clusters["central"].cluster_name}"
+      config_membership = "projects/${var.project_id}/locations/${var.clusters["central"].region}/memberships/${module.gke_clusters["central"].cluster_name}"
     }
   }
 

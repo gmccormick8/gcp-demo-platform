@@ -2,7 +2,7 @@ applications:
 %{ for name, cluster in clusters ~}
   - mario-${name}:
       namespace: ${namespace}
-      project: default
+      project: "default"
       source:
         repoURL: ${gitops_repo_url}
         targetRevision: ${environment}

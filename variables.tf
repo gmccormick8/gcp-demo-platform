@@ -29,6 +29,10 @@ variable "clusters" {
     pods_network_name     = string
     services_network_name = string
     master_ipv4_cidr      = string
+    master_authorized_networks = list(object({
+      cidr_block   = string
+      display_name = string
+    }))
   }))
 }
 

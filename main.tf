@@ -13,19 +13,20 @@ module "gke_clusters" {
   for_each = var.clusters
   source   = "./modules/gke"
 
-  project_id             = var.project_id
-  cluster_name           = each.value.cluster_name
-  zone                   = each.value.zone
-  network_name           = module.demo-vpc.network_self_link
-  subnet_name            = module.demo-vpc.subnets[each.value.subnet_key].self_link
-  pods_network_name      = each.value.pods_network_name
-  services_network_name  = each.value.services_network_name
-  master_ipv4_cidr_block = each.value.master_ipv4_cidr
-  min_node_count         = var.min_node_count
-  max_node_count         = var.max_node_count
-  machine_type           = var.machine_type
-  disk_size_gb           = var.disk_size_gb
-  disk_type              = var.disk_type
+  project_id                 = var.project_id
+  cluster_name               = each.value.cluster_name
+  zone                       = each.value.zone
+  network_name               = module.demo-vpc.network_self_link
+  subnet_name                = module.demo-vpc.subnets[each.value.subnet_key].self_link
+  pods_network_name          = each.value.pods_network_name
+  services_network_name      = each.value.services_network_name
+  master_ipv4_cidr_block     = each.value.master_ipv4_cidr
+  min_node_count             = var.min_node_count
+  max_node_count             = var.max_node_count
+  machine_type               = var.machine_type
+  disk_size_gb               = var.disk_size_gb
+  disk_type                  = var.disk_type
+  master_authorized_networks = each.value.master_authorized_networks
 
   depends_on = [
     module.demo-vpc

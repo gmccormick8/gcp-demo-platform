@@ -48,6 +48,12 @@ clusters = {
     pods_network_name     = "demo-east-pods"
     services_network_name = "demo-east-services"
     master_ipv4_cidr      = "172.16.0.0/28"
+    master_authorized_networks = [
+      {
+        cidr_block   = "0.0.0.0/0"
+        display_name = "Github Actions"
+      }
+    ]
   }
   central = {
     cluster_name          = "central-cluster"
@@ -57,6 +63,12 @@ clusters = {
     pods_network_name     = "demo-central-pods"
     services_network_name = "demo-central-services"
     master_ipv4_cidr      = "172.16.1.0/28"
+    master_authorized_networks = [
+      {
+        cidr_block   = "0.0.0.0/0"
+        display_name = "Github Actions"
+      }
+    ]
   }
   west = {
     cluster_name          = "west-cluster"
@@ -66,6 +78,12 @@ clusters = {
     pods_network_name     = "demo-west-pods"
     services_network_name = "demo-west-services"
     master_ipv4_cidr      = "172.16.2.0/28"
+    master_authorized_networks = [
+      {
+        cidr_block   = "0.0.0.0/0"
+        display_name = "Github Actions"
+      }
+    ]
   }
 }
 

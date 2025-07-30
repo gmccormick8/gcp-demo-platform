@@ -1,8 +1,9 @@
 applications:
 %{ for name, cluster in clusters ~}
-  - name: mario-${name}
+  mario-${name}:
+    name: mario-${name}
     namespace: ${namespace}
-    project: "default"
+    project: default
     source:
       repoURL: ${gitops_repo_url}
       targetRevision: ${environment}
@@ -12,9 +13,9 @@ applications:
           gateway:
             enable: ${name == "central" ? true : false}
           global:
-            environment: ${environment}
+            environment: "${environment}"
     destination:
-      server: https://${cluster.endpoint}
+      server: "https://${cluster.endpoint}"
       namespace: ${app_namespace}
     syncPolicy:
       automated:

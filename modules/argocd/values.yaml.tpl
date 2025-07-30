@@ -1,4 +1,4 @@
-%{ for name, cluster in clusters ~}
+%{ for name, cluster in ${clusters} ~}
   mario-${name}:
     name: mario-${name}
     namespace: ${namespace}

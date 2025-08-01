@@ -83,20 +83,30 @@ This repository demonstrates a secure infrastructure deployment to Google Cloud 
 .
 ├── .github/
 │   └── workflows/
-│       ├── deploy.yml        # Deployment workflow
-│       └── destroy.yml       # Infrastructure cleanup workflow
+│       ├── deploy-template.yml        # Deployment workflow template
+│       ├── destroy-template.yml       # Infrastructure cleanup workflow template
+│       ├── dev-deploy.yml             # Dev deployment workflow
+│       ├── dev-destroy.yml            # Dev cleanup workflow
+│       ├── enforce-merge-policy.yml   # Force merges to follow Dev => Staging => Prod
+│       ├── prod-deploy.yml            # Prod deployment workflow
+│       ├── prod-destroy.yml           # Prod cleanup workflow
+│       ├── staging-deploy.yml         # Dev deployment workflow
+│       └── staging-destroy.yml        # Dev cleanup workflow    
 ├── modules/
-│   ├── argocd/              # ArgoCD deployment module
-│   ├── gke/                 # GKE cluster module
-│   └── network/             # VPC network module
+│   ├── argocd/                        # ArgoCD deployment module
+│   ├── gke/                           # GKE cluster module
+│   └── network/                       # VPC network module
 ├── .gitignore
+├── dev.tfvars                         # Development environment configuration
 ├── LICENSE
 ├── README.md
-├── init.sh                  # Environment setup script
-├── main.tf                  # Main Terraform configuration
-├── outputs.tf               # Output definitions
-├── providers.tf             # Provider configuration
-└── variables.tf             # Variable definitions
+├── init.sh                            # Environment setup script
+├── main.tf                            # Main Terraform configuration
+├── outputs.tf                         # Output definitions
+├── prod.tfvars                        # Production environment configuration
+├── providers.tf                       # Provider configuration
+├── staging.tfvars                     # Staging environment configuration
+└── variables.tf                       # Variable definitions
 ```
 
 ## Security Features

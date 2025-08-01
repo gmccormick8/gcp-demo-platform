@@ -68,7 +68,7 @@ clusters = {
     subnet_key            = "demo-east-vpc"
     pods_network_name     = "demo-east2-pods"
     services_network_name = "demo-east2-services"
-    master_ipv4_cidr      = "172.16.0.0/28"
+    master_ipv4_cidr      = "172.16.3.0/28"
     master_authorized_networks = [
       {
         cidr_block   = "0.0.0.0/0"

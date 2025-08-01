@@ -11,6 +11,12 @@ subnets = {
       "demo-east-services" = {
         ip_cidr_range = "192.168.32.0/19"
       }
+      "demo-east2-pods" = {
+        ip_cidr_range = "192.168.192.0/19"
+      }
+      "demo-east2-services" = {
+        ip_cidr_range = "192.168.224.0/19"
+      }
     }
   }
   "demo-central-vpc" = {
@@ -26,7 +32,7 @@ subnets = {
     }
   }
   "demo-west-vpc" = {
-    region = "us-west4"
+    region = "us-west3"
     cidr   = "10.0.2.0/24"
     secondary_ranges = {
       "demo-west-pods" = {
@@ -55,6 +61,21 @@ clusters = {
       }
     ]
   }
+  east2 = {
+    cluster_name          = "east-cluster2"
+    region                = "us-east5"
+    zone                  = "us-east5-a"
+    subnet_key            = "demo-east-vpc"
+    pods_network_name     = "demo-east2-pods"
+    services_network_name = "demo-east2-services"
+    master_ipv4_cidr      = "172.16.0.0/28"
+    master_authorized_networks = [
+      {
+        cidr_block   = "0.0.0.0/0"
+        display_name = "Github Actions"
+      }
+    ]
+  }
   central = {
     cluster_name          = "central-cluster"
     region                = "us-central1"
@@ -72,8 +93,8 @@ clusters = {
   }
   west = {
     cluster_name          = "west-cluster"
-    region                = "us-west4"
-    zone                  = "us-west4-c"
+    region                = "us-west3"
+    zone                  = "us-west3-c"
     subnet_key            = "demo-west-vpc"
     pods_network_name     = "demo-west-pods"
     services_network_name = "demo-west-services"
